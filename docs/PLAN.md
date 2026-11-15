@@ -27,7 +27,7 @@ A〜H の確認のときに見つかった3点。仕様は、この文書の「�
 | | 項目 | 主に触るファイル |
 |---|---|---|
 | [x] | I. 枠を選んだだけのときは、楽譜を作り直さない | `js/score.js` `js/app.js` `js/guide.js` `tools/smoke.py` |
-| [ ] | J. 楽譜のキャッシュを軽くする | `js/score.js` `tools/smoke.py` |
+| [x] | J. 楽譜のキャッシュを軽くする | `js/score.js` `tools/smoke.py` |
 | [ ] | K. スマートフォンでも機能と度数を見せる | `js/guide.js` `css/style.css` |
 
 ---
@@ -333,6 +333,12 @@ A〜H の確認のときに見つかった3点。仕様は、この文書の「�
 1. A の検査（キャッシュあり・なしで `#sheet` が一致）と、I の検査が通る。
 2. `tools/smoke.py` に検査を足す：`vfCache` の値を1つ取り、`JSON.parse(JSON.stringify(v))` したものが元と同じ内容になる（＝値だけでできている）。関数や VexFlow のオブジェクトが入っていれば落ちる検査にする。
 3. `x`・`edge` を作る関数が `vfEngrave` の外にある（差分で確かめる）。
+
+**実装メモ（J）**
+- `vfEngrave`（`js/score.js`）は、最後に `info` を値だけの形（区間 `{t0, t1, bx, x, w, pts, heads}`、音符 `{start, rest, x, left, kind, label, strong}`）に作り直し、`{clefW, W, barW, sys0, info, inner}` を返す。中で使う `heads`（`sn`・`e` を持つもの）は組版の途中だけで使い、外へは出さない。
+- `x`・`edge` は、トップレベルの新しい関数 `vfMap(info, sys0)` が作る（中身は前と同じで、`s.sg.t0` → `s.t0`、`hh.e.start` → `hh.start` などに合わせただけ）。`vfSystem` は、キャッシュから取り出すたびに `vfMap` を呼ぶ。`svg()` の `h.e.rest` は `h.rest` にした。
+- `tools/smoke.py`：`vfCache` のすべての値について、`JSON.parse(JSON.stringify(v))` と、型（配列か、ただのオブジェクトか）とキーと値が一致するかを見る検査を足した。関数・`undefined`・クラスのオブジェクトが入ると一致しない。VexFlow のオブジェクトは循環していて `JSON.stringify` が例外を出すので、例外も「落ちる」と数える。わざと関数・VexFlow の音符・`undefined`・クラスのオブジェクトを混ぜると、どれも落ちることを確かめた。
+- A の検査（キャッシュあり・なしで `#sheet` が一致）と I の検査は通る。見た目は A の検査で同じことを確かめている。
 
 ---
 

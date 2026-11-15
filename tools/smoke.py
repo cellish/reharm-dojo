@@ -59,6 +59,16 @@ with sync_playwright() as p:
         ev(js)
         if not ev(same):
             errs.append(f"cached sheet differs after {name}")
+    # cached systems hold plain values only: a JSON round trip must give back the same thing
+    # (a function, undefined, or an object of some class such as a VexFlow note would not survive it)
+    plain = ev("""(()=>{ const same=(a,b)=>{ if(typeof a!=="object" || a===null) return Object.is(a,b);
+        if(typeof b!=="object" || b===null) return false;
+        if(Array.isArray(a) ? !Array.isArray(b) : Object.getPrototypeOf(a)!==Object.prototype) return false;
+        const ka=Object.keys(a), kb=Object.keys(b); return ka.length===kb.length && ka.every(k=>same(a[k],b[k])); };
+      const rt=v=>{ try{ return same(v, JSON.parse(JSON.stringify(v))); }catch(e){ return false; } };   // VexFlow objects are circular
+      const vs=[...vfCache.values()]; return vs.length>0 && vs.every(rt); })()""")
+    if not plain:
+        errs.append("a cached system holds something other than plain values")
     # only the system holding the edited cell is engraved anew
     ev("render()"); vfw = "[...document.querySelectorAll('#sheet .vfw')].map(g=>g.innerHTML)"; before = ev(vfw)
     ev("setChord(state.chords.length-1, {root:'A', q:'m7'}, 'test')")

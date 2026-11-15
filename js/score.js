@@ -59,13 +59,13 @@ function vfSystem(b0,bars,first,last,bps,units){
     E = vfEngrave(b0,bars,first,last,bps,units,col);
     if(VF_CACHE){ vfCache.set(key, E); if(vfCache.size>VF_CACHE_MAX) vfCache.delete(vfCache.keys().next().value); }
   }
-  const {clefW, W, barW, M, info, inner}=E, {x, edge}=M;
+  const {clefW, W, barW, sys0, info, inner}=E, M=vfMap(info, sys0), {x, edge}=M;
   const svg = () => {
     let g=""; const cells=[];
     units.forEach(i=>{ const u=state.chords[i], x1=edge(u.s), x2=edge(u.s+u.l); cells.push([+x1.toFixed(1),+x2.toFixed(1),i]);
       g+=`<rect class="hl${i===state.sel?" sel":""}" data-i="${i}" x="${x1}" y="0" width="${x2-x1}" height="${HB}"/>`; });
     g+=`<g class="vfw">${inner}</g>`;
-    info.forEach(s=>s.heads.forEach(h=>{ if(h.e.rest || h.kind==="pk") return;
+    info.forEach(s=>s.heads.forEach(h=>{ if(h.rest || h.kind==="pk") return;
       g+=`<text class="deg f-${h.kind}${h.strong?"":" weak"}" x="${h.x}" y="${DEG_Y}" text-anchor="middle">${esc(h.label)}</text>`; }));
     if(HB>H){
       g+=`<text class="blab" x="4" y="${BASS_Y}">ベース</text>`;
@@ -152,19 +152,26 @@ function vfEngrave(b0,bars,first,last,bps,units,col){
   ctxTies.splice(0).forEach(([a,b])=>new V.StaveTie({firstNote:a,lastNote:b,firstIndexes:[0],lastIndexes:[0]}).setContext(ctx).draw());
   song.notes.forEach(n=>{ if(!n.tie) return; const a=vn[n.idx], b=vn[n.idx+1]; if(!a&&!b) return;
     new V.StaveTie({firstNote:a?a.last:undefined, lastNote:b?b.first:undefined, firstIndexes:[0], lastIndexes:[0]}).setContext(ctx).draw(); });
-  const seg = t => info.find(s=>t>=s.sg.t0-1e-6 && t<s.sg.t1-1e-6) || info[info.length-1];
-  const x = t => { const s=seg(t), p=s.pts; let j=0; while(j<p.length-2 && t>=p[j+1][0]-1e-6) j++;
-    const f=(t-p[j][0])/(p[j+1][0]-p[j][0]||1); return p[j][1]+f*(p[j+1][1]-p[j][1]); };
-  const edge = t => { const s=info.find(ss=>Math.abs(ss.sg.t0-t)<1e-6 && ss.sg.t0>=sys0-1e-6);
-    if(s) return s.sg.bx;
-    const l=info[info.length-1]; if(Math.abs(t-l.sg.t1)<1e-6) return l.sg.x+l.sg.w;
-    const h=seg(t).heads.find(hh=>Math.abs(hh.e.start-t)<1e-6);
-    return h ? h.left-6 : x(t)-10; };
   // copied out as a string: vfHost is reused by the next system, and nothing below reads it again
   const inner=vfHost.querySelector("svg").innerHTML;
-  return {clefW, W, barW, M:{x,edge}, info, inner};
+  // only plain values go into the cache: no VexFlow objects, no closures over this function's locals
+  const plain=info.map(({sg,pts,heads})=>({t0:sg.t0, t1:sg.t1, bx:sg.bx, x:sg.x, w:sg.w, pts,
+    heads:heads.map(h=>({start:h.e.start, rest:!!h.e.rest, x:h.x, left:h.left, kind:h.kind, label:h.label, strong:h.strong}))}));
+  return {clefW, W, barW, sys0, info:plain, inner};
 }
 const ctxTies=[];
+// time → x on one engraved system (x: between note positions; edge: where a cell starting at t begins)
+function vfMap(info, sys0){
+  const seg = t => info.find(s=>t>=s.t0-1e-6 && t<s.t1-1e-6) || info[info.length-1];
+  const x = t => { const s=seg(t), p=s.pts; let j=0; while(j<p.length-2 && t>=p[j+1][0]-1e-6) j++;
+    const f=(t-p[j][0])/(p[j+1][0]-p[j][0]||1); return p[j][1]+f*(p[j+1][1]-p[j][1]); };
+  const edge = t => { const s=info.find(ss=>Math.abs(ss.t0-t)<1e-6 && ss.t0>=sys0-1e-6);
+    if(s) return s.bx;
+    const l=info[info.length-1]; if(Math.abs(t-l.t1)<1e-6) return l.x+l.w;
+    const h=seg(t).heads.find(hh=>Math.abs(hh.start-t)<1e-6);
+    return h ? h.left-6 : x(t)-10; };
+  return {x, edge};
+}
 function vfWaitFonts(){
   if(!VF()) return;
   let n=0; const tick=()=>{
