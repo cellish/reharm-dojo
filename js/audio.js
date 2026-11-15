@@ -50,12 +50,19 @@ function playRange(from,to,chords,mode,startBeat,origin){
     if(n.start<b1 && n.start+dur>b0){
       const s=Math.max(n.start,b0), e=Math.min(n.start+dur,b1); tone(bus,n.midi+xp.semis,t0+(s-b0)*spb,(e-s)*spb,"mel"); }});
   const start = origin ?? b0;
-  play={bus,mode,raf:0, from,to,chords, start, beat:()=>(ctx.currentTime-t0)/spb+b0};
+  play={bus,mode,raf:0, from,to,chords, start, end:b1, beat:()=>(ctx.currentTime-t0)/spb+b0};
   const tick=()=>{ if(!play) return; const beat=(ctx.currentTime-t0)/spb+b0;
-    if(beat>=b1 && state.loop){ playRange(from,to,chords,mode,start,start); return; }   // the next pass starts on the end beat
+    if(beat>=b1 && state.loop){ replayBeats(play, start); return; }   // the next pass starts on the end beat
     if(beat>=b1){ play.bus.disconnect && setTimeout(()=>bus.disconnect(),600); play=null; markPlaying(-1); playButtons(); return; }
     markPlaying(beat>=0 && mode!=="orig"? unitAt(beat):-1); play.raf=requestAnimationFrame(tick); };
   play.raf=requestAnimationFrame(tick); playButtons();
+}
+// Play the same span of beats again from startBeat. Cells may have been merged or split since the range
+// was chosen, so the cell indices are found anew from the beats (the original's cells never change).
+function replayBeats(p, startBeat){
+  const U = p.mode==="orig" ? p.chords : state.chords;
+  const from=U.findIndex(x=>x.s+x.l>p.start+1e-6), to=U.findIndex(x=>x.s>=p.end-1e-6);
+  playRange(Math.max(0,from), to<0?U.length:to, U, p.mode, startBeat, p.start);
 }
 let lastPlaying=-1;
 function markPlaying(i){

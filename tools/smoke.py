@@ -72,6 +72,15 @@ with sync_playwright() as p:
     if not ev(same):
         errs.append("cached sheet differs after widening back to 4 bars per system")
     ev('$("#resetYes").click()')
+    # repeat playback goes on across a merge and a split made while playing (cell indices shift)
+    ev('state.harm=false; applyHarmUi(); loadSong("twinkle"); state.bpm=150; state.loop=true; state.sel=state.chords.length-3; render()')
+    ev("window.passes=[]; window.pr0=playRange; playRange=function(...a){ passes.push([a[0], a[1], a[2].length]); return pr0.apply(this, a); }; 0")
+    ev('$("#hearHere").click()'); ev("mergeNext(0); render()"); pg.wait_for_timeout(2700)   # one pass is 2.4 s
+    ev("splitUnit(0); render()"); pg.wait_for_timeout(2700)
+    loop = ev("[!!play, passes.length, passes[passes.length-1], state.chords.length]")
+    if not loop[0] or loop[1] < 3 or loop[2][1] != loop[3]:
+        errs.append(f"repeat after merge/split: playing {loop[0]}, passes {loop[1]}, last pass {loop[2]}, cells {loop[3]}")
+    ev("stop(); playRange=pr0; state.loop=false; state.bpm=88; histGo(-1); histGo(-1)")
     # how long a selection change takes on the longest song (see docs/PLAN.md, item D)
     ev('state.harm=false; applyHarmUi(); loadSong("tea")')
     ms = ev("(()=>{ const t=performance.now(); for(let k=0;k<10;k++){ state.sel=k; render(); } return (performance.now()-t)/10; })()")

@@ -223,8 +223,7 @@ function restoreTerm(){
 let bpmTimer=0;
 function replayLater(){
   if(!play) return; clearTimeout(bpmTimer);
-  bpmTimer=setTimeout(()=>{ if(!play) return; const p=play, at=p.beat();
-    playRange(p.from, p.to, p.chords, p.mode, Math.max(at, p.chords[p.from].s-(p.from===0?song.pk:0)), p.start); }, 90);
+  bpmTimer=setTimeout(()=>{ if(!play) return; const p=play; replayBeats(p, Math.max(p.beat(), p.start)); }, 90);
 }
 $("#bpm").oninput=e=>{ state.bpm=+e.target.value; $("#bpmOut").textContent=state.bpm; replayLater(); };
 $("#mix").value=state.mix;
