@@ -456,7 +456,18 @@ function bindRGuide(el){
   const tr=$("#toRev2"); if(tr) tr.onclick=()=>{ rev={target:i+1, chain:[]}; state.sel=i+1; state.tab="rev"; store.set(tabKey(),"rev"); render(); };
 }
 
-function renderInsp(){ renderInspBody(); restoreTerm(); }
+function renderInsp(){ renderInspBody(); restoreTerm(); showAnsNote(); }
+// On phones the panel is a sheet fixed to the bottom of the screen, and near the top of the page it covers
+// the lower part of the selected-cell bar, where the answer line sits. When a new answer appears, scroll
+// just far enough to bring it above the sheet. Only on a change, so reading the toolbar is not disturbed.
+let lastAns="";
+function showAnsNote(){
+  const a=$("#selbar .ansnote"), txt=a ? a.textContent : "";
+  if(txt===lastAns) return; lastAns=txt;
+  if(!a || !matchMedia("(max-width:720px)").matches) return;
+  const over=a.getBoundingClientRect().bottom+8-$("#insp").getBoundingClientRect().top;
+  if(over>0) window.scrollBy({top:over, behavior:"smooth"});
+}
 function renderInspBody(){
   const i=state.sel;
   $("#selbar").innerHTML = selbarHtml(i);
