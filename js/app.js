@@ -102,6 +102,7 @@ $("#edForm").addEventListener("submit",e=>{
   def.id = editingId || ("u"+Date.now().toString(36));
   const list=customList().filter(d=>d.id!==def.id); list.push(def); store.set("rehamo:songs", list);
   SONGS[def.id]={...def, custom:true};
+  vfCache.clear();   // an edited song keeps its id, so cached systems of the old version must go
   store.set("rehamo:"+def.id, null); store.set("rehamo:key:"+def.id, null);
   closeEditor(); state.songId=null; songOptions(); loadSong(def.id);
 });
