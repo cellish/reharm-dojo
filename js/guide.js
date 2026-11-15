@@ -45,7 +45,7 @@ function selbarHtml(i){
   return `<div class="selrow">
     <span class="ilabel">${slotName(i)}</span>
     <span class="selchord">${esc(sym(c))}</span>
-    <div class="imeta">${state.harm&&!state.reveal?"":`<span>原曲 <b>${esc(sym(o))}</b></span>`}<span>機能 ${fnText(A)}</span>${A.roman?`<span>度数 <b>${esc(A.roman)}</b>${A.alt?`（${esc(A.alt)}）`:""}</span>`:""}${away?`<span>ここは <b>${esc(droot(K.tonic))}${K.minor?"m":""}</b> に転調中</span>`:""}<span>次 <b>${next?esc(sym(next)):"（終わり）"}</b></span></div>
+    <div class="imeta">${state.harm&&!state.reveal?"":`<span>原曲 <b>${esc(sym(o))}</b></span>`}<span>${termBtn("fn","機能")} ${fnText(A)}</span>${A.roman?`<span>${termBtn("deg","度数")} <b>${esc(A.roman)}</b>${A.alt?`（${esc(A.alt)}）`:""}</span>`:""}${away?`<span>ここは <b>${esc(droot(K.tonic))}${K.minor?"m":""}</b> に転調中</span>`:""}<span>次 <b>${next?esc(sym(next)):"（終わり）"}</b></span></div>
     <span class="selbtns">
       <button class="btn" id="hearPrev">${play&&play.mode==="prevbar"?"■ 停止":"▶ 前小節から"}</button>
       <button class="btn primary" id="hearHere">${play&&play.mode==="here"?"■ 停止":"▶ ここから"}</button>
@@ -83,7 +83,7 @@ function candHtml(i){
   const c=state.chords[i], o=origAt(i);
   let h = `<div><h2>${state.harm?"コード候補":"置き換え候補"}<span>${slotName(i)}${!state.harm||state.reveal?`（原曲 ${esc(sym(o))}）`:""}</span></h2><div class="groups">`;
   suggest(i).forEach((g,gi)=>{
-    h+=`<div class="grp"><details data-tech="${esc(g.tech)}"${openTech.has(g.tech)?" open":""}><summary>${esc(g.title)}</summary><p>${esc(g.desc)}</p></details><div class="cands">`;
+    h+=`<div class="grp"><details data-tech="${esc(g.tech)}"${openTech.has(g.tech)?" open":""}><summary>${esc(g.title)}</summary><p>${glossed(esc(g.desc))}</p></details><div class="cands">`;
     g.items.forEach((it,ci)=>{ h+=candItem(it,i,`data-g="${gi}" data-c="${ci}"`); });
     h+=`</div></div>`;
   });
@@ -268,7 +268,7 @@ function guideHtml(){
     <h3 class="gtitle"><small>ステップ ${step} / ${GSTEPS.length}</small>${GSTEPS[step-1]}</h3>`;
   if(step===1){
     const H=HOME(), PH=PRIM(H), HN=PRIM_NAME(H), sf=c=>pcsOf(c).map(p=>SOLF[p]).join("・");
-    h+=`<p class="hint">まず骨組みです。フレーズ（4小節ずつ）の最後で、曲が<b>終わる（${HN.I}）</b>のか、<b>まだ続く（${HN.V}）</b>のかを決めます。最後の音が「${sf(PH.I)}」なら ${HN.I}、「${sf(PH.V)}」なら ${HN.V} が合います。曲の最後のフレーズは ${HN.I} で終えます。</p><div class="glist">`;
+    h+=`<p class="hint">${glossed(`まず骨組みです。フレーズ（4小節ずつ）の最後で、曲が<b>終わる（${HN.I}）</b>のか、<b>まだ続く（${HN.V}）</b>のかを決めます。最後の音が「${sf(PH.I)}」なら ${HN.I}、「${sf(PH.V)}」なら ${HN.V} が合います。曲の最後のフレーズは ${HN.I} で終えます。`)}</p><div class="glist">`;
     phrases().forEach((ph,k,arr)=>{
       const Kp=keyOfCell(ph.end), P=PRIM(Kp), PN=PRIM_NAME(Kp);
       const u=state.chords[ph.end], sol=ph.last?SOLF[mod(ph.last.midi-Kp.pc)]:"（休符）";
@@ -281,7 +281,7 @@ function guideHtml(){
     h+=`</div><p class="hint">⚠ は、その音がコードに含まれないことを表します。</p>`;
   }
   if(step===2){
-    h+=`<p class="hint">次に、コードを変える間隔を決めます。初めは<b>1小節に1つ</b>がおすすめです。楽譜の音符の下に出ている「ド・レ・ミ」のうち、<b>濃い字が骨格の音</b>（長い音や強拍の音）です。この音がコードの音になるように選びます。強拍でも短い音は、飾りの音のことがあります。</p>`;
+    h+=`<p class="hint">${glossed(`次に、コードを変える間隔を決めます。初めは<b>1小節に1つ</b>がおすすめです。楽譜の音符の下に出ている「ド・レ・ミ」のうち、<b>濃い字が骨格の音</b>（長い音や強拍の音）です。この音がコードの音になるように選びます。強拍でも短い音は、飾りの音のことがあります。`)}</p>`;
     if(isHalfMeter()){
       const r=rhythmNow();
       h+=`<div class="gbtns"><button class="btn${r==="bar"?" primary":""}" data-rh="bar">1小節に1つ</button><button class="btn${r==="half"?" primary":""}" data-rh="half">2拍に1つ</button></div>
@@ -295,7 +295,7 @@ function guideHtml(){
     const fits=["I","IV","V"].filter(k=>contains(P[k],pcs)).map(k=>PN[k]);
     const nx=state.chords[i+1], tip=neighborTip(i);
     const each = sk.length>1 && !fits.length ? sk.map(n=>`${solfOf(n.midi,K.pc)}を含む：${["I","IV","V"].filter(k=>contains(P[k],[mod(n.midi)])).map(k=>PN[k]).join("・")||"なし"}`).join("／") : "";
-    h+=`<p class="hint">使うのは ${PN.I}・${PN.IV}・${PN.V}（と ${PN.V7}）だけです。<b>骨格の音</b>（長い音や強拍の音）を含むコードを選びます。</p>
+    h+=`<p class="hint">${glossed(`使うのは ${PN.I}・${PN.IV}・${PN.V}（と ${PN.V7}）だけです。<b>骨格の音</b>（長い音や強拍の音）を含むコードを選びます。`)}</p>
       <p class="hint">終止の手前から決めると楽です。「次に決める枠へ」は、①終止の直前 → ②フレーズの頭 → ③残り の順に進みます。</p>
       <div class="chainrow"><span>${slotName(i)}：骨格の音 <b>${skTxt||"なし"}</b> → ${fits.length?`含むのは <b>${fits.join("・")}</b>`:sk.length>1?`両方を含むコードはありません。<br><small>${each}。どちらを優先するか決めるか、「枠を分割」して2つのコードにします。</small>`:"含むコードはありません（いちばん近いものを）"}${tip?`<br><small class="tip">${tip}</small>`:""}</span></div>
       <div class="cands">${["I","IV","V","V7"].map(k=>candButton(P[k], i, `data-prim="${k}"`, `<span class="oname">${PN[k]}</span>`)).join("")}</div>
@@ -305,13 +305,13 @@ function guideHtml(){
     const iss=flowIssues();
     const strip=barStrip(state.chords, (u,k)=>{ const A=analyze(u,keyAt(u.s));
       return `<button class="fn f-${A.fn||"x"}${k===i?" cur":""}" data-go="${k}" title="${slotName(k)}${A.note?"："+A.note:""}"><b>${esc(sym(u))}</b><small>${fnMark(A)}</small></button>`; });
-    h+=`<p class="hint">T（トニック）→ S（サブドミナント）→ D（ドミナント）→ T の流れになっているかを見ます。押すとその枠を選びます。</p>
+    h+=`<p class="hint">${glossed(`T（トニック）→ S（サブドミナント）→ D（ドミナント）→ T の流れになっているかを見ます。押すとその枠を選びます。`)}</p>
       <div class="fstrip">${strip}</div>
       ${iss.length?`<ul class="issues">${iss.map(x=>`<li class="${x.kind}"><button data-go="${x.i}">${esc(x.text)}</button></li>`).join("")}</ul>`:`<p class="hint good">気になる点はありません。「原曲のコードを見る」で答え合わせもできます。</p>`}`;
   }
   if(step===5){
     const c=state.chords[i];
-    h+=`<p class="hint">I・IV・V の骨組みに、同じ働きをもつ別のコードを混ぜて動きを付けます。${isMinor()?"♭III や ♭VI は Im の、IIm7(♭5) は IVm の仲間です。":"VIm・IIIm は I の、IIm は IV の仲間です。"}骨格の音が乗るものを選びます。</p>`;
+    h+=`<p class="hint">${glossed(`I・IV・V の骨組みに、同じ働きをもつ別のコードを混ぜて動きを付けます。${isMinor()?"♭III や ♭VI は Im の、IIm7(♭5) は IVm の仲間です。":"VIm・IIIm は I の、IIm は IV の仲間です。"}骨格の音が乗るものを選びます。`)}</p>`;
     if(!c.root) h+=`<p class="hint">この枠にはまだコードがありません。</p>`;
     else { const opts=widenOptions(c,K);
       h+= opts.length ? `<div class="cands">${opts.map(([cc,nm],k)=>candButton(cc,i,`data-wid="${k}"`,`<span class="oname">${esc(nm)}</span>`)).join("")}</div>`
@@ -320,7 +320,7 @@ function guideHtml(){
   }
   if(step===6){
     const c=state.chords[i], nx=state.chords[i+1];
-    h+=`<p class="hint">仕上げに、次のコードへ引き寄せるコード（セカンダリードミナント）や、7th・6th で色を足します。</p>`;
+    h+=`<p class="hint">${glossed(`仕上げに、次のコードへ引き寄せるコード（セカンダリードミナント）や、7th・6th で色を足します。`)}</p>`;
     if(!c.root) h+=`<p class="hint">この枠にはまだコードがありません。</p>`;
     else {
       const opts=colorList(i);
@@ -390,7 +390,7 @@ function rGuideHtml(){
   let h=`<div class="revbox">
     <ol class="steps gsteps">${RSTEPS.map((t,k)=>`<li class="${k+1===step?"on":""}${k+1<step?" done":""}"><button data-gs="${k+1}" title="${t}" aria-label="ステップ${k+1}：${t}"${k+1===step?' aria-current="step"':""}></button></li>`).join("")}</ol>
     <h3 class="gtitle"><small>ステップ ${step} / ${n}</small>${RSTEPS[step-1]}</h3>
-    <p class="hint">${RDESC[id]}</p>`;
+    <p class="hint">${glossed(RDESC[id])}</p>`;
   if(id==="read"){
     const ends=new Set(phraseEnds());
     const ou=origUnits();
@@ -438,7 +438,8 @@ function bindRGuide(el){
   const tr=$("#toRev2"); if(tr) tr.onclick=()=>{ rev={target:i+1, chain:[]}; state.sel=i+1; state.tab="rev"; store.set(tabKey(),"rev"); render(); };
 }
 
-function renderInsp(){
+function renderInsp(){ renderInspBody(); restoreTerm(); }
+function renderInspBody(){
   const i=state.sel;
   $("#selbar").innerHTML = selbarHtml(i);
   const tabs = `<div class="tabs" role="tablist">

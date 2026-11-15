@@ -141,13 +141,59 @@ const TERM_TEXT = {
   av:["アボイド","コードの音と半音でぶつかって、響きを濁らせやすい音です。たとえば C の上のファ（11度）は、コードのミと半音でぶつかります。弱拍で通り過ぎるだけなら問題ありませんが、強拍や長い音では避けるか、コードを替えます。"],
   sk:["骨格の音","耳に残りやすい音のことです。枠の最初の音、強拍（小節の1拍目。4拍子では3拍目も）の音、長くのびる音がこれに当たります。コードとの相性は、この音で判定します。それ以外の短い音は、経過音や刺繍音として通り過ぎるなら、ぶつかっても気になりません。音符の下の数字は、骨格の音が濃く、それ以外が薄く表示されます。"],
   nc:["非和声音","コードの音にもテンションにも当たらない音です。経過音（音階を順に通り過ぎる音）や刺繍音（隣の音に行って戻る音）として弱拍で鳴るなら自然ですが、強拍で長く鳴るとぶつかって聞こえます。"],
+  fn:["機能（T・S・D）","コードの働きのことです。T（トニック）は落ち着く所、S（サブドミナント）は少し動きたくなる所、D（ドミナント）は T に戻りたくなる緊張です。T → S → D → T が基本の流れです。"],
+  deg:["度数","調の主音から数えたコードの位置を、ローマ数字で書いたものです。ハ長調なら C が I、F が IV、G7 が V7 です。度数で覚えると、どの調でも同じ考え方が使えます。"],
+  sec:["セカンダリードミナント","I 以外のコードを一時的な着地点とみなして、その5度上に置く 7th コードです。ハ長調で Dm の前に置く A7 がその例で、Dm へ強く引き寄せます。"],
+  twofive:["II–V","着地点の手前に II と V を並べる形です（C へ向かう Dm7 → G7）。ジャズでいちばんよく使う進行で、V7 ひとつを II–V に分けることもできます。"],
+  sub:["裏コード","V7 の代わりに使える、増4度離れた 7th コードです（G7 の代わりに D♭7）。大事な2音（3度と7度）が共通で、ベースが半音で下りて着地します。"],
+  bor:["借用","同じ主音の短調（短調の曲なら長調）のコードを、一時的に借りてくることです。ハ長調で Fm や B♭7 を使うと、少し陰った響きになります。"],
+  slash:["分数コード","C/E のように書き、「C のコードで、ベースは E」という意味です。ベースだけを変えて、低音の線をなめらかにします。"],
+  decept:["偽終止","V から I へ進まず、VIm などへ進む形です。終わると思わせて続けるので、フレーズを先へつなげられます。"],
+  cliche:["クリシェ","同じコードが続く所で、コードの中の1音だけを半音ずつ動かす手法です（C → Cmaj7 → C7）。止まっていた響きに線が生まれます。"],
 };
-document.querySelectorAll(".legend .term").forEach(b=>b.onclick=()=>{
-  const open=b.getAttribute("aria-expanded")==="true", box=$("#termbox");
-  document.querySelectorAll(".legend .term").forEach(x=>x.setAttribute("aria-expanded","false"));
-  if(open){ box.hidden=true; return; }
-  const [t,txt]=TERM_TEXT[b.dataset.term]; box.innerHTML=`<b>${t}</b>${txt}`; box.hidden=false; b.setAttribute("aria-expanded","true");
+// Words in guide text that open their TERM_TEXT entry (written form → id)
+const GLOSS = [["T・S・D","fn"],["セカンダリードミナント","sec"],["II–V","twofive"],["裏コード","sub"],["借用","bor"],["借りて","bor"],
+  ["分数コード","slash"],["偽終止","decept"],["クリシェ","cliche"],["テンション","tn"],["骨格の音","sk"],["アボイド","av"]];
+const GLOSS_RE = new RegExp(GLOSS.map(([w])=>w.replace(/[.*+?^${}()|[\]\\]/g,"\\$&")).sort((x,y)=>y.length-x.length).join("|"), "g");
+const termBtn = (id, label) => `<button type="button" class="term gl" data-term="${id}" aria-expanded="false">${label}</button>`;
+// Turn the glossary words in a piece of HTML into term buttons: only in text (never inside a tag or an
+// existing term button), and each id only once per call so a paragraph is not covered in underlines.
+function glossed(html){
+  const done=new Set(); let inBtn=0;
+  return String(html).split(/(<[^>]*>)/).map(part=>{
+    if(part.startsWith("<")){ if(/^<button\b/i.test(part)) inBtn++; else if(/^<\/button>/i.test(part)) inBtn=Math.max(0,inBtn-1); return part; }
+    if(inBtn) return part;
+    return part.replace(GLOSS_RE, w=>{ const id=GLOSS.find(g=>g[0]===w)[1]; if(done.has(id)) return w; done.add(id); return termBtn(id, w); });
+  }).join("");
+}
+// One explanation box open at a time. The legend has its own box; a term in the right-hand panel opens a
+// box right under its paragraph. The panel is rebuilt on every render, so the open term is remembered
+// (id, which of the buttons with that id, and the selected cell) and reopened after each renderInsp.
+let openTerm=null;
+const panelTerms = () => [...document.querySelectorAll(".term")].filter(b=>!b.closest(".legend"));
+function closeTerms(){
+  document.querySelectorAll('.term[aria-expanded="true"]').forEach(x=>x.setAttribute("aria-expanded","false"));
+  document.querySelectorAll(".glossbox").forEach(x=>x.remove()); $("#termbox").hidden=true;
+}
+function showTerm(b){
+  const [t,txt]=TERM_TEXT[b.dataset.term], box=`<b>${t}</b>${txt}`;
+  b.setAttribute("aria-expanded","true");
+  if(b.closest(".legend")){ $("#termbox").innerHTML=box; $("#termbox").hidden=false; return; }
+  (b.closest("p, .selrow") || b.parentElement).insertAdjacentHTML("afterend", `<p class="termbox glossbox">${box}</p>`);
+}
+document.addEventListener("click", e=>{
+  const b=e.target.closest(".term"); if(!b || !TERM_TEXT[b.dataset.term]) return;
+  const was=b.getAttribute("aria-expanded")==="true"; closeTerms(); openTerm=null;
+  if(was) return;
+  showTerm(b);
+  if(!b.closest(".legend")) openTerm={id:b.dataset.term, k:panelTerms().filter(x=>x.dataset.term===b.dataset.term).indexOf(b), sel:state.sel};
 });
+function restoreTerm(){
+  if(!openTerm) return;
+  if(openTerm.sel!==state.sel){ openTerm=null; return; }   // a different cell: start closed
+  const b=panelTerms().filter(x=>x.dataset.term===openTerm.id)[openTerm.k];
+  if(b) showTerm(b); else openTerm=null;
+}
 // A tempo change while playing restarts playback from the current beat at the new tempo
 // (debounced, so dragging the slider does not re-attack the chords on every step).
 let bpmTimer=0;
