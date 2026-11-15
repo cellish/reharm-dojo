@@ -183,7 +183,7 @@ function render(){
   const gs = (!state.harm && state.tab==="guide") ? rflow() : null;
   const canSet = new Set(TECH[gs] ? state.chords.map((u,k)=>k).filter(k=>rStepUsable(gs,k)) : []);
   $("#legendCan").hidden = !canSet.size;
-  let html="", cnt={good:0,ok:0,bad:0,none:0}, changed=0, match=0;
+  let html="", cnt={good:0,ok:0,bad:0,none:0}, changed=0, match=0, fnMatch=0;
   const ready=vfOn();
   if(!ready) html=`<p class="hint sheetmsg">${vfFailed||!VF() ? "楽譜を描く部品（VexFlow）を読み込めませんでした。通信の状態を確かめて、ページを読み込み直してください。" : "楽譜を準備しています…"}</p>`;
   for(let b0=0; ready && b0<nb; b0+=bps){
@@ -194,6 +194,7 @@ function render(){
     units.forEach(i=>{
       const c=state.chords[i], o=origAt(i), v=verdict(rolesFor(c,i));
       cnt[v]++; const mod_=isChanged(i); if(mod_) changed++; if(state.harm && same(c,o)) match++;
+      else if(state.harm && state.reveal && c.root){ const K=keyAt(c.s), A=analyze(c,K); if(A.fn && A.fn===analyze(o,K).fn) fnMatch++; }
       const cls = (canSet.has(i)?" can":"")+(i===state.sel?" sel":"")+(i===rev.target?" tgt":"")+(chainSet.has(i)?" chain":"")+(c.l<=1?" small":"");
       html+=`<button class="slot${cls}" data-i="${i}" aria-label="${slotName(i)} ${esc(sym(c))}">
         <span class="orig">${state.harm ? (state.reveal?`<span class="ans${same(c,o)?" hit":""}">原曲 ${esc(sym(o))}</span>`:esc(c.tech||"")) : (mod_?`<s>${esc(sym(o))}</s> ${esc(c.tech||"")}`:"")}</span>
@@ -207,7 +208,7 @@ function render(){
     <span class="pill good">○ ${cnt.good}</span><span class="pill ok">△ ${cnt.ok}</span><span class="pill bad">✕ ${cnt.bad}</span>
     <label class="chk"><input type="checkbox" id="revealOn" ${state.reveal?"checked":""}>原曲のコードを見る</label>
     <label class="chk"><input type="checkbox" id="romanOn" ${state.roman?"checked":""}>度数を表示</label>
-    ${state.reveal?`<span>原曲と同じ：<b>${match}</b> 枠（違っていても、合っていれば正解です）</span>`:""}` :
+    ${state.reveal?`<span>原曲と同じ：<b>${match}</b> 枠、同じ機能：<b>${fnMatch}</b> 枠（違っていても、合っていれば正解です）</span>`:""}` :
     `<span>置き換え <b>${changed}</b> / ${n} か所</span>
     <span class="pill good">○ ${cnt.good}</span><span class="pill ok">△ ${cnt.ok}</span><span class="pill bad">✕ ${cnt.bad}</span>
     <span>${cnt.bad? "赤い点の枠は、骨格の音（強拍や長い音）がコードとぶつかっています。":"骨格の音がぶつかっている枠はありません。"}</span>
