@@ -173,6 +173,17 @@ function vfWaitFonts(){
   tick();
 }
 
+// Changing only the selection: move the marks on the score instead of rebuilding it, then redo the
+// right-hand panel. The whole render() is still used when the score itself may look different.
+function selectCell(i){
+  const prev=state.sel; state.sel=i;
+  const sheet=$("#sheet");
+  if(!vfOn() || !sheet.querySelector(`.slot[data-i="${i}"]`)
+     || (state.harm && keyOfCell(prev).minor!==keyOfCell(i).minor)){ render(); return; }   // the ラ toggle in #summary may come or go
+  sheet.querySelectorAll(".slot.sel, rect.hl.sel").forEach(e=>e.classList.remove("sel"));
+  sheet.querySelectorAll(`.slot[data-i="${i}"], rect.hl[data-i="${i}"]`).forEach(e=>e.classList.add("sel"));
+  renderInsp();
+}
 function render(){
   $("#songSel").value=state.songId;
   const n=state.chords.length, bpb=song.bpb, nb=song.nbars, bps=barsPerSystem();

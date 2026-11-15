@@ -126,7 +126,7 @@ function slotFromEvent(e){
   const hit=JSON.parse(svg.dataset.cells||"[]").find(c=>x>=c[0] && x<c[1]);
   return hit ? hit[2] : -1;
 }
-$("#sheet").onclick=e=>{ const i=slotFromEvent(e); if(i<0) return; state.sel=i; render(); };
+$("#sheet").onclick=e=>{ const i=slotFromEvent(e); if(i<0) return; selectCell(i); };
 $("#sheet").ondblclick=e=>{ if(slotFromEvent(e)>=0) previewSel(); };
 let lastBps=0;
 if(window.ResizeObserver) new ResizeObserver(()=>{ const b=barsPerSystem(); if(lastBps && b!==lastBps) render(); lastBps=b; }).observe($("#sheet"));
@@ -278,7 +278,7 @@ document.addEventListener("keydown",e=>{
     e.preventDefault(); const u=state.chords[state.sel]; state.chords[state.sel]={s:u.s,l:u.l,root:null,q:null}; save(); render(); return;
   }
   if(e.key==="ArrowRight"||e.key==="ArrowLeft"){
-    e.preventDefault(); state.sel=Math.max(0,Math.min(state.chords.length-1,state.sel+(e.key==="ArrowRight"?1:-1))); render();
+    e.preventDefault(); selectCell(Math.max(0,Math.min(state.chords.length-1,state.sel+(e.key==="ArrowRight"?1:-1))));
     const s=document.querySelector(`.slot[data-i="${state.sel}"]`); s&&s.focus({preventScroll:false});
   }
 });

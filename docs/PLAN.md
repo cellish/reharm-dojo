@@ -26,7 +26,7 @@ A〜H の確認のときに見つかった3点。仕様は、この文書の「�
 
 | | 項目 | 主に触るファイル |
 |---|---|---|
-| [ ] | I. 枠を選んだだけのときは、楽譜を作り直さない | `js/score.js` `js/app.js` `js/guide.js` `tools/smoke.py` |
+| [x] | I. 枠を選んだだけのときは、楽譜を作り直さない | `js/score.js` `js/app.js` `js/guide.js` `tools/smoke.py` |
 | [ ] | J. 楽譜のキャッシュを軽くする | `js/score.js` `tools/smoke.py` |
 | [ ] | K. スマートフォンでも機能と度数を見せる | `js/guide.js` `css/style.css` |
 
@@ -302,6 +302,13 @@ A〜H の確認のときに見つかった3点。仕様は、この文書の「�
 2. `tools/smoke.py` の最後の計測を `selectCell` での計測に替える（`render()` での計測も残して、両方出す）。`selectCell` のほうが 10 ms 以下。
 3. 再生中に矢印キーで枠を移っても、再生位置の印が消えない。
 4. 右のパネルの用語の説明（C）は、枠を替えたら閉じる（今までと同じ）。
+
+**実装メモ（I）**
+- `js/score.js` に `selectCell(i)`（仕様のまま）。1〜3 のどれかに当たれば `render()`、それ以外は `#sheet` の `.slot.sel`・`rect.hl.sel` を付け替えて `renderInsp()`。
+- 置き換えた所：`js/app.js` の楽譜のクリックと矢印キー、`js/guide.js` の `[data-go]`（伴奏付け・リハモの2か所）、`#nextEmpty`、`#nextUsable`。ほか（`[data-cad]`、`.tgtpick`、`#toRev2`、逆算の操作、`restoreOrig` など）は選択以外も変わるので `render()` のまま。
+- `tools/smoke.py`：Tea for Two／きらきら星 × リハモ／伴奏付けで、枠 1・中ほど・最後・0 に `selectCell` したあとの `#sheet` が `render()` のあとと一致する検査を足した。最後の計測は `render()` と `selectCell()` の両方を出す。この環境では render() 約7 ms、selectCell() 約2 ms。
+- 確かめたこと（Playwright）：再生中に矢印キーで2つ移っても `.playing` の印が残り、`render()` は呼ばれない（フォーカスも移る）。「機能」の説明を開いて別の枠を押すと閉じる。短調の区間をもつ仮の曲で、伴奏付けで長調 → 短調の区間の枠に移ると `render()` が呼ばれて「短調はラから読む」が出て、長調へ戻ると消える。
+- ついでに直した点：R1 で足したくり返しの検査が、決まった時間（2.7 秒×2）だけ待つ形だったため、1回だけ落ちた（周回は 2.4 秒で、余裕が少ない）。周回の数が増えるまで待つ形（`wait_for_function`、上限 8 秒）に替えた。
 
 ---
 
