@@ -265,6 +265,10 @@ h1 .en{font-weight:500;font-size:20px;color:var(--ink-2);letter-spacing:.04em;ma
 .legend span{display:inline-flex;gap:5px;align-items:center}
 .legend .term{display:inline-flex;gap:5px;align-items:center;font:inherit;color:var(--ink);background:none;border:0;border-bottom:1px dashed var(--ink-2);padding:0 0 1px;cursor:pointer}
 .legend .term[aria-expanded="true"]{border-bottom-style:solid;font-weight:600}
+/* a glossary word inside guide text: dotted underline like the legend, no colour mark */
+.term.gl{font:inherit;color:inherit;background:none;border:0;border-bottom:1px dashed var(--ink-2);padding:0;margin:0;cursor:pointer;line-height:inherit}
+.term.gl[aria-expanded="true"]{border-bottom-style:solid;color:var(--ink)}
+.glossbox{margin:0;font-weight:400}
 .termbox{flex-basis:100%;margin:2px 0 0;padding:8px 12px;background:var(--soft);border-radius:8px;font-size:13px;line-height:1.7;color:var(--ink)}
 .termbox b{margin-right:6px}
 .canmark{display:inline-block;width:16px;height:11px;border-radius:3px;border:1.6px dashed var(--accent)}
