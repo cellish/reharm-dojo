@@ -12,7 +12,7 @@
 | [x] | C. 用語の説明を広げる | `js/app.js` `js/guide.js` `css/style.css` |
 | [x] | D. 「はじめに」の案内 | `index.html` `js/app.js` `css/style.css` |
 | [x] | E. 伴奏付けの答え合わせ | `js/guide.js` `js/score.js` |
-| [ ] | F. 再生のくり返しと音量バランス | `index.html` `js/audio.js` `js/app.js` |
+| [x] | F. 再生のくり返しと音量バランス | `index.html` `js/audio.js` `js/app.js` |
 | [ ] | G. 短調の階名をラから読む切り替え | `js/theory.js` `js/guide.js` `js/score.js` |
 | [ ] | H. フレーズの区切りを曲ごとに指定 | `js/guide.js` `js/app.js` `js/music.js` |
 
@@ -208,6 +208,13 @@
 3. mix を 0／100 にすると、片方だけが鳴る。50 は変更前と同じ音量。
 4. 幅 480px で「再生」の行が折り返しても崩れない。
 
+**実装メモ**
+- `js/audio.js`：`playRange` に第6引数 `origin`（最初に再生したときの開始拍）を足し、`play.start` に持たせた。`tick` で `beat>=b1` かつ `state.loop` なら `playRange(from,to,chords,mode,start,start)` を呼び直す。`melGain()`／`chordGain()`（計画の式のまま）を `tone` の `peak` に掛ける（ベースはコード側）。
+- `js/app.js`：テンポ変更の再開を `replayLater()` にまとめ、`p.start` を渡すようにした。mix のスライダーも同じ `replayLater()` で反映。`rehamo:loop`／`rehamo:mix` に保存し、`state.loop`／`state.mix`（`js/state.js`）として起動時に読む。
+- `index.html`：「再生」の行に `くり返す`（`#loopOn`）と「メロディ［スライダー］コード」（`#mix`、`aria-label` は「メロディ ←→ コード」）。
+- 確かめたこと（Playwright、テンポ 150）：くり返しオンで「ここから」（枠20）は、終わると枠20の拍（44）からまた始まり、停止で止まる。「▶ 原曲」の聴き比べは 4〜20拍（4小節）をくり返す。再生中にテンポを変えても `play.start` は 44 のまま。mix 0／50／100 で（メロディ, コード）＝（1,0）／（1,1）／（0,1）。保存して読み込み直すと戻る。幅 480／1280px のツールバーを撮って目で確かめた。音そのものは耳で聞いていない。
+- 気づいた点：くり返しは `playRange` 全体にかかるので、候補を選んだときの短い試聴（`previewSel`、逆算の試聴）も、くり返しオンなら止めるまでくり返す（「未決」に書いた）。
+
 ---
 
 ## G. 短調の階名をラから読む切り替え
@@ -252,3 +259,4 @@
 （ここに、項目の記号と質問を書く。）
 
 - **E**：答え合わせの文は計画どおり `verdictMsg` の後ろ（`.vmsg`）に出したが、幅 720px 以下では `.selbar .vmsg{display:none}` で判定の文ごと隠れるため、スマートフォンでは答え合わせの文が見えない。狭い画面でも出すか（たとえば答え合わせの文だけ別の要素にして残す）を決めてほしい。
+- **F**：くり返しを `playRange` 全体にかけたので、候補を選んだときの短い試聴（`previewSel`、mode `"slot"`）もくり返しオンなら止めるまで鳴り続ける。計画の「全体、ここから、前小節から、聴き比べ、原曲」に試聴は入っていないので、試聴はくり返さないほうがよければ、mode `"slot"` を除く。

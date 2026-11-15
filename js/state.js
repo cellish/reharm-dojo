@@ -1,7 +1,8 @@
 // App state, saving, undo/redo, and edits to the chord cells.
 // ---------- state ----------
 function store0(k){ try{ return JSON.parse(localStorage.getItem(k)); }catch(e){ return null; } }
-const state = {songId:"twinkle", chords:[], sel:0, bpm:88, melOn:true, tab:"rev", harm:!!store0("rehamo:harm"), reveal:false, roman:!!store0("rehamo:roman")};
+const state = {songId:"twinkle", chords:[], sel:0, bpm:88, melOn:true, tab:"rev", harm:!!store0("rehamo:harm"), reveal:false, roman:!!store0("rehamo:roman"),
+  loop:!!store0("rehamo:loop"), mix:Number.isFinite(store0("rehamo:mix"))?store0("rehamo:mix"):50};
 let rev = {target:null, chain:[]};   // chain: [{i, prev}] from the target backwards
 const openTech = new Set();
 let song;
