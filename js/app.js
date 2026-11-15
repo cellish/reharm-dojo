@@ -175,7 +175,7 @@ const TERM_TEXT = {
   cliche:["クリシェ","同じコードが続く所で、コードの中の1音だけを半音ずつ動かす手法です（C → Cmaj7 → C7）。止まっていた響きに線が生まれます。"],
 };
 // Words in guide text that open their TERM_TEXT entry (written form → id)
-const GLOSS = [["T・S・D","fn"],["セカンダリードミナント","sec"],["II–V","twofive"],["裏コード","sub"],["借用","bor"],["借りて","bor"],
+const GLOSS = [["T・S・D","fn"],["機能","fn"],["セカンダリードミナント","sec"],["II–V","twofive"],["裏コード","sub"],["借用","bor"],["借りて","bor"],
   ["分数コード","slash"],["偽終止","decept"],["クリシェ","cliche"],["テンション","tn"],["骨格の音","sk"],["アボイド","av"]];
 const GLOSS_RE = new RegExp(GLOSS.map(([w])=>w.replace(/[.*+?^${}()|[\]\\]/g,"\\$&")).sort((x,y)=>y.length-x.length).join("|"), "g");
 const termBtn = (id, label) => `<button type="button" class="term gl" data-term="${id}" aria-expanded="false">${label}</button>`;
