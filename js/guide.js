@@ -365,8 +365,8 @@ function bindGuide(el){
   el.querySelectorAll("[data-rh]").forEach(b=>b.onclick=()=>{ setRhythm(b.dataset.rh); render(); });
   el.querySelectorAll("[data-prim]").forEach(b=>b.onclick=()=>{ const k=b.dataset.prim;
     setChord(i, P[k], PN[k]); previewSel(); });
-  const ne=$("#nextEmpty"); if(ne) ne.onclick=()=>{ const k=fillOrder().find(j=>j!==i && !state.chords[j].root); if(k!=null){ state.sel=k; render(); } };
-  el.querySelectorAll("[data-go]").forEach(b=>b.onclick=()=>{ state.sel=+b.dataset.go; render(); });
+  const ne=$("#nextEmpty"); if(ne) ne.onclick=()=>{ const k=fillOrder().find(j=>j!==i && !state.chords[j].root); if(k!=null) selectCell(k); };
+  el.querySelectorAll("[data-go]").forEach(b=>b.onclick=()=>selectCell(+b.dataset.go));
   el.querySelectorAll("[data-wid]").forEach(b=>b.onclick=()=>{ const [cc,nm]=widenOptions(state.chords[i],K)[+b.dataset.wid];
     setChord(i, cc, "代理"); previewSel(); });
   el.querySelectorAll("[data-col]").forEach(b=>b.onclick=()=>{
@@ -446,13 +446,13 @@ function bindRGuide(el){
   const gp=$("#gPrev"), gn=$("#gNext");
   if(gp) gp.onclick=()=>go(step-1);
   if(gn) gn.onclick=()=>go(step+1);
-  el.querySelectorAll("[data-go]").forEach(b=>b.onclick=()=>{ state.sel=+b.dataset.go; render(); });
+  el.querySelectorAll("[data-go]").forEach(b=>b.onclick=()=>selectCell(+b.dataset.go));
   const co=$("#cmpO");
   if(co) co.onclick=()=>{ if(play&&play.mode==="orig") stop(); else { const ou=origUnits(); playRange(0,ou.length,ou,"orig"); } };
   const opts=rStepCands(id,i);
   el.querySelectorAll("[data-rc]").forEach(b=>b.onclick=()=>{ applyItem(i, opts[+b.dataset.rc]); previewSel(); });
   const nu=$("#nextUsable"); if(nu) nu.onclick=()=>{ const U=state.chords;
-    let k=U.findIndex((u,j)=>j>i && rStepUsable(id,j)); if(k<0) k=U.findIndex((u,j)=>rStepUsable(id,j)); if(k>=0){ state.sel=k; render(); } };
+    let k=U.findIndex((u,j)=>j>i && rStepUsable(id,j)); if(k<0) k=U.findIndex((u,j)=>rStepUsable(id,j)); if(k>=0) selectCell(k); };
   const tr=$("#toRev2"); if(tr) tr.onclick=()=>{ rev={target:i+1, chain:[]}; state.sel=i+1; state.tab="rev"; store.set(tabKey(),"rev"); render(); };
 }
 

@@ -75,18 +75,32 @@ with sync_playwright() as p:
     # repeat playback goes on across a merge and a split made while playing (cell indices shift)
     ev('state.harm=false; applyHarmUi(); loadSong("twinkle"); state.bpm=150; state.loop=true; state.sel=state.chords.length-3; render()')
     ev("window.passes=[]; window.pr0=playRange; playRange=function(...a){ passes.push([a[0], a[1], a[2].length]); return pr0.apply(this, a); }; 0")
-    ev('$("#hearHere").click()'); ev("mergeNext(0); render()"); pg.wait_for_timeout(2700)   # one pass is 2.4 s
-    ev("splitUnit(0); render()"); pg.wait_for_timeout(2700)
+    # wait for each next pass (one pass is 2.4 s) rather than a fixed time, so a slow machine does not fail
+    def wait_passes(k):
+        try: pg.wait_for_function(f"passes.length>={k}", timeout=8000)
+        except Exception: pass   # reported by the check below
+    ev('$("#hearHere").click()'); ev("mergeNext(0); render()"); wait_passes(2)
+    ev("splitUnit(0); render()"); wait_passes(3)
     loop = ev("[!!play, passes.length, passes[passes.length-1], state.chords.length]")
     if not loop[0] or loop[1] < 3 or loop[2][1] != loop[3]:
         errs.append(f"repeat after merge/split: playing {loop[0]}, passes {loop[1]}, last pass {loop[2]}, cells {loop[3]}")
     ev("stop(); playRange=pr0; state.loop=false; state.bpm=88; histGo(-1); histGo(-1)")
-    # how long a selection change takes on the longest song (see docs/PLAN.md, item D)
+    # selectCell only moves the selection marks: the sheet must equal a full render() afterwards
+    sheet = "$('#sheet').innerHTML.replace(/vf-auto\\d+/g,'')"
+    for harm in (False, True):
+        for sid in ("tea", "twinkle"):
+            ev(f"state.harm={'true' if harm else 'false'}; applyHarmUi(); restoreTab(); loadSong('{sid}')")
+            for k in ev("[1, Math.floor(state.chords.length/2), state.chords.length-1, 0]"):
+                a = ev(f"selectCell({k}), {sheet}")
+                if a != ev(f"render(), {sheet}"):
+                    errs.append(f"selectCell({k}) on {sid} ({'harm' if harm else 'reharm'}) differs from render()")
+    # how long a selection change takes on the longest song (see docs/PLAN.md, items A and I)
     ev('state.harm=false; applyHarmUi(); loadSong("tea")')
     ms = ev("(()=>{ const t=performance.now(); for(let k=0;k<10;k++){ state.sel=k; render(); } return (performance.now()-t)/10; })()")
+    ms_sel = ev("(()=>{ const t=performance.now(); for(let k=0;k<10;k++) selectCell(k); return (performance.now()-t)/10; })()")
     b.close()
 
-print(f"{n} renders and edits, {len(errs)} page errors, selection change on Tea for Two: {ms:.0f} ms")
+print(f"{n} renders and edits, {len(errs)} page errors, selection change on Tea for Two: render() {ms:.0f} ms, selectCell() {ms_sel:.0f} ms")
 for e in errs[:10]:
     print("  ", e)
 sys.exit(1 if errs else 0)
