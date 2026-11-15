@@ -42,6 +42,11 @@ header{display:flex;flex-direction:column;gap:12px}
 .modesw button[data-mode="reharm"][aria-pressed="true"]{background:var(--accent);color:var(--accent-ink)}
 .modesw button[data-mode="harm"][aria-pressed="true"]{background:var(--tn);color:var(--sheet)}
 .modesw button[aria-pressed="true"] small{color:inherit;opacity:.85}
+.topbtns{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.intro{padding:10px 14px 12px;font-size:14px}
+.introhead{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.introhead h2{margin:0}
+.intro ol{margin:4px 0 0;padding-left:1.4em;display:flex;flex-direction:column;gap:2px}
 .toolbar{display:flex;flex-direction:column;gap:8px;padding:10px 12px;background:var(--sheet);border:1px solid var(--rule);border-radius:10px}
 .trow{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
 .trow .sp{flex:1}
