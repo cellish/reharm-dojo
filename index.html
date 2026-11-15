@@ -103,6 +103,7 @@ label.chk{display:inline-flex;gap:4px;align-items:center;font-size:13px;color:va
 .sys{display:grid;grid-template-rows:auto auto;min-width:0}
 .sys .lead{grid-row:1;grid-column:1;align-self:end;font-size:11px;color:var(--ink-2);font-variant-numeric:tabular-nums;padding:0 0 2px 1px}
 .sys svg{grid-row:2;grid-column:1/-1;width:100%;height:auto;display:block;cursor:pointer;overflow:visible}
+.rom{font-family:var(--f-chord);font-size:12.5px;line-height:1.15;color:var(--ink-2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .slot{all:unset;grid-row:1;box-sizing:border-box;cursor:pointer;display:flex;flex-direction:column;gap:0;padding:2px 6px 0;min-width:0;border-radius:4px 4px 0 0;position:relative}
 .slot:hover{background:var(--soft)}
 .slot:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
@@ -328,6 +329,8 @@ h2{font-size:13px;font-weight:700;margin:0 0 8px;letter-spacing:.04em;color:var(
         <button class="btn" id="newSong">＋ 曲を入力</button>
         <button class="btn" id="editSong" hidden>この曲を編集</button>
         <span class="sp"></span>
+        <button class="btn" id="undoBtn" title="元に戻す（Ctrl+Z）" disabled>↶ 元に戻す</button>
+        <button class="btn" id="redoBtn" title="やり直す（Ctrl+Shift+Z）" disabled>↷ やり直す</button>
         <button class="btn warn" id="reset">すべて原曲に戻す</button>
         <span class="confirm" id="resetConfirm" hidden><span id="resetMsg">置き換えをすべて元に戻しますか？</span>
           <button class="btn warn" id="resetYes">戻す</button><button class="btn" id="resetNo">やめる</button></span>
@@ -353,9 +356,10 @@ h2{font-size:13px;font-weight:700;margin:0 0 8px;letter-spacing:.04em;color:var(
         <button class="term" data-term="tn" aria-expanded="false"><svg width="13" height="10" aria-hidden="true"><ellipse class="f-tn" cx="6.5" cy="5" rx="5.4" ry="3.8" transform="rotate(-20 6.5 5)"/></svg>テンション</button>
         <button class="term" data-term="av" aria-expanded="false"><svg width="13" height="10" aria-hidden="true"><ellipse class="f-av" cx="6.5" cy="5" rx="5.4" ry="3.8" transform="rotate(-20 6.5 5)"/></svg>アボイド</button>
         <button class="term" data-term="nc" aria-expanded="false"><svg width="13" height="10" aria-hidden="true"><ellipse class="f-nc" cx="6.5" cy="5" rx="5.4" ry="3.8" transform="rotate(-20 6.5 5)"/></svg>非和声音</button>
+        <button class="term" data-term="sk" aria-expanded="false">骨格の音</button>
         <span id="legendCan" hidden><i class="canmark" aria-hidden="true"></i>この段階の候補がある枠</span>
         <span>五線をクリックしても枠を選べます</span>
-        <span>← → キーで枠を移動</span>
+        <span>← → キーで枠を移動、スペースで再生・停止</span>
         <span>コード名はキー入力もできます（例：<code>Dm7</code> → Enter）</span>
         <p class="termbox" id="termbox" hidden></p>
       </div>
@@ -384,7 +388,7 @@ h2{font-size:13px;font-weight:700;margin:0 0 8px;letter-spacing:.04em;color:var(
       <details class="help"><summary>書き方</summary>
         <ul>
           <li>音は「音名＋オクターブ」で書きます。中央のドが <code>C4</code> です。シャープは <code>#</code>、フラットは <code>b</code>（例 <code>F#4</code>、<code>Bb3</code>）。</li>
-          <li>長さは「:拍数」で付けます。4分音符は 1（省略可）、8分 0.5、付点8分 0.75、16分 0.25、付点4分 1.5、2分 2、付点2分 3、全音符 4。</li>
+          <li>長さは「:拍数」で付けます。4分音符は 1（省略可）、8分 0.5、付点8分 0.75、16分 0.25、付点4分 1.5、2分 2、付点2分 3、全音符 4。3連符は <code>1/3</code>（1拍を3つに割る。例 <code>E5:1/3 D5:1/3 C5:1/3</code>）。</li>
           <li>休符は <code>r</code>（4分休符）、<code>r:2</code> のように書きます。</li>
           <li>次の音とタイでつなぐときは末尾に <code>~</code> を付けます（例 <code>G4:3~ | G4:2 E4</code>）。</li>
           <li>最後の小節は短くてもかまいません。残りは休符で埋めます。改行は自由です。</li>
@@ -436,7 +440,7 @@ const SONGS = {
           "G4:2 G4","Bb4:1.5 A4:0.5 G4","F4:1.5 G4:0.5 F4","D4:2 r","G4:2 G4","Bb4:1.5 A4:0.5 G4","F4:1.5 G4:0.5 F4","D4:3",
           "C5:2 C5","Eb5:1.5 C5:0.5 A4","Bb4:3","D5:3","Bb4 F4 D4","F4:1.5 Eb4:0.5 C4","Bb3:3"],
     chords:"Bb | Bb | Bb | Bb | F7 | F7 | Bb | Bb | Eb | Eb | Bb | Bb | Eb | Eb | Bb | Bb | F7 | F7 | Bb | Bb | Bb | F7 | Bb" },
-  tea:{ name:"Tea for Two", bpb:4, slot:2, src:"A♭", home:"A♭",
+  tea:{ name:"Tea for Two", bpb:4, slot:2, src:"A♭", home:"A♭", keys:[[9,15,"C","major"]],
     bars:["Ab4:1.5 F4:0.5 G4:1.5 F4:0.5",
           "Ab4:1.5 F4:0.5 G4:1.5 Eb4:0.5",
           "G4:1.5 Eb4:0.5 F4:1.5 Eb4:0.5",
@@ -474,7 +478,7 @@ const SONGS = {
     bars:["G4:4","r C4 E4 F4","G4:4","r C4 E4 F4","G4:2 E4:2","C4:2 E4:2","D4:4","r E4 E4 D4",
           "C4:3 C4","E4:2 G4:2","G4 G4 F4:2","F4:2 E4 F4","G4:2 E4:2","C4:2 D4:2","C4:4"],
     chords:"C C | C C | C C | C C | C C | C C | G7 G7 | G7 G7 | C C | C7 C7 | F F | F F | C C | C G7 | C C" },
-  blues:{ name:"ブルース（練習用オリジナル）", bpb:4, slot:2,
+  blues:{ name:"ブルース（練習用オリジナル）", bpb:4, slot:2, blues:true,
     bars:["C5 Bb4 G4:2","A4 C5 Eb5:2","C5 Bb4 G4 Eb4","E4:2 r:2","A4 C5 Eb5:2","D5 C5 A4:2","C5 Bb4 G4 E4","C4:2 r:2","D5 B4 G4 F4","Eb5 C5 A4 F4","E4 G4 C5:2","B4:2 r:2"],
     chords:"C7 C7 | F7 F7 | C7 C7 | C7 C7 | F7 F7 | F7 F7 | C7 C7 | C7 C7 | G7 G7 | F7 F7 | C7 C7 | G7 G7" },
   godrest:{ name:"世の人忘るな", bpb:4, slot:2, mode:"minor", src:"E", home:"E", pickup:"E4",
@@ -557,11 +561,12 @@ function parseChord(s){
   if(bass && rootPc(bass)!==rootPc(c.root)) c.bass=bass;
   return c;
 }
+const durOf = d => !d ? 1 : d.includes("/") ? d.split("/")[0]/d.split("/")[1] : +d;   // "1/3" = triplet eighth
 // token: "E4" (quarter), "E4:1.5", "r" / "r:2" (rest), trailing "~" = tie to next note
 function parseNotes(str, t, notes, rests){
   str.trim().split(/\s+/).forEach(tok=>{
     const tie=tok.endsWith("~"); tok=tok.replace("~","");
-    const [n,d]=tok.split(":"); const dur = !d ? 1 : d.includes("/") ? d.split("/")[0]/d.split("/")[1] : +d;   // "1/3" = triplet eighth
+    const [n,d]=tok.split(":"); const dur=durOf(d);
     if(n==="r"){ rests.push({start:t,dur}); t+=dur; return; }
     const m=n.match(/^([A-G][#b]?)(\d)$/);
     const sp=parseSpelled(m[1]);
@@ -578,7 +583,7 @@ function splitBar(bpb, n){
 }
 function buildSong(id){
   const s = SONGS[id], notes=[], rests=[]; let pk=0;
-  if(s.pickup){ pk=s.pickup.trim().split(/\s+/).reduce((a,tok)=>{ const d=tok.replace("~","").split(":")[1]; return a+(d?+d:1); },0);
+  if(s.pickup){ pk=s.pickup.trim().split(/\s+/).reduce((a,tok)=>a+durOf(tok.replace("~","").split(":")[1]),0);
     parseNotes(s.pickup,-pk,notes,rests); }
   s.bars.forEach((bar,bi)=>parseNotes(bar,bi*s.bpb,notes,rests));
   notes.forEach((n,k)=>{ n.idx=k; if(n.tie && notes[k+1]) notes[k+1].tiedFrom=true; });
@@ -602,13 +607,15 @@ function buildSong(id){
       cells.push(o); t+=lens[k]; });
   });
   const lo=Math.min(...notes.map(n=>n.midi)), hi=Math.max(...notes.map(n=>n.midi));
-  return {...s, id, notes, rests, pk, orig:cells, nbars:s.bars.length, lo, hi, spellC};
+  // modulated stretches: keys:[[firstBar, lastBar, tonic as written, "major"|"minor"]]
+  const regions=(s.keys||[]).map(([a,b,t,m])=>({b0:(a-1)*s.bpb, b1:b*s.bpb, tonic:convName(t), minor:m==="minor"}));
+  return {...s, id, notes, rests, pk, orig:cells, nbars:s.bars.length, lo, hi, spellC, regions};
 }
 
 // ---------- analysis ----------
 const SOLF={0:"ド",1:"ド♯",2:"レ",3:"ミ♭",4:"ミ",5:"ファ",6:"ファ♯",7:"ソ",8:"ラ♭",9:"ラ",10:"シ♭",11:"シ"};
-function roleOf(chord, midi){
-  if(!chord || !chord.root) return {kind:"un", label:SOLF[mod(midi)]};
+function roleOf(chord, midi, tonicPc=0){
+  if(!chord || !chord.root) return {kind:"un", label:SOLF[mod(midi-tonicPc)]};
   const iv = mod(midi - rootPc(chord.root)); const q=Q[chord.q];
   if(iv in q.ct) return {kind:"ct", label:q.ct[iv]};
   if(iv in q.tn) return {kind:"tn", label:q.tn[iv]};
@@ -616,10 +623,20 @@ function roleOf(chord, midi){
   return {kind:"nc", label:FALLBACK[iv]};
 }
 // A "unit" is one chord cell: {s: start beat, l: length in beats, root, q, tech}
-function notesIn(i){
-  const u=state.chords[i], s=u.s, e=s+u.l;
-  return song.notes.filter(n=>n.start<e-1e-6 && n.start+n.dur>s+1e-6).map(n=>({...n, strong: n.start<=s+1e-6}));
+// A note is structural ("strong") in a span when it starts the span, falls on a strong beat of the bar
+// (beat 1; also beat 3 in 4/4), or sounds for a long share of the span. Everything else is ornamental.
+function isStrong(n, s, l){
+  if(n.start<=s+1e-6) return true;
+  const pos=mod(n.start, song.bpb);
+  if(pos<1e-6 || (song.bpb===4 && Math.abs(pos-2)<1e-6)) return true;
+  const len=Math.min(n.start+n.dur, s+l)-Math.max(n.start, s);
+  return len >= Math.max(1.5, l/2)-1e-6;
 }
+function notesSpan(s, l){
+  const e=s+l;
+  return song.notes.filter(n=>n.start<e-1e-6 && n.start+n.dur>s+1e-6).map(n=>({...n, strong:isStrong(n,s,l)}));
+}
+const notesIn = i => notesSpan(state.chords[i].s, state.chords[i].l);
 const origAt = i => { const s0=state.chords[i].s; return song.orig.find(c=>s0>=c.s-1e-6 && s0<c.s+c.l-1e-6) || song.orig[0]; };
 const sameCell = (u,o) => Math.abs(u.s-o.s)<1e-6 && Math.abs(u.l-o.l)<1e-6;
 const totalBeats = () => song.nbars*song.bpb;
@@ -632,99 +649,199 @@ function isPassing(n){
   const d1=n.midi-a.midi, d2=b.midi-n.midi;
   return d1!==0 && d2!==0 && Math.abs(d1)<=2 && Math.abs(d2)<=2 && Math.sign(d1)===Math.sign(d2);
 }
-function rolesFor(chord,i){ return notesIn(i).map(n=>{ const r={...n, ...roleOf(chord,n.midi), name:dnoteName(n.midi)};
+function rolesSpan(chord,s,l){ const off=keyAt(s).pc; return notesSpan(s,l).map(n=>{ const r={...n, ...roleOf(chord,n.midi,off), name:dnoteName(n.midi)};
   if((r.kind==="av"||r.kind==="nc") && isPassing(n)) r.passing=true; return r; }); }
+const rolesFor = (chord,i) => rolesSpan(chord, state.chords[i].s, state.chords[i].l);
 function verdict(roles){
   if(roles.some(r=>r.kind==="un")) return "none";
   if(roles.some(r=>r.strong && !r.passing && (r.kind==="av"||r.kind==="nc"))) return "bad";
   if(roles.some(r=>(r.kind==="av"||r.kind==="nc") && (!r.strong || r.passing) && !(r.passing && !r.strong))) return "ok";
   return "good";
 }
-const VERDICT_TEXT = {none:"コード未設定", good:"○ ぶつかりなし", ok:"△ 弱拍に注意音", bad:"✕ 強拍でぶつかる"};
+const VERDICT_TEXT = {none:"コード未設定", good:"○ ぶつかりなし", ok:"△ 短い音がぶつかる", bad:"✕ 骨格の音がぶつかる"};
 
-// ---------- substitution suggestions (key of C) ----------
+// ---------- keys and chord analysis ----------
+// Everything below works in a "local key": the song's home key (tonic C in the C frame) or,
+// inside a modulated region (song.regions), that region's tonic. Chord tables are written
+// relative to C and moved into the local key with inKey(), which keeps the letter spelling.
 const MODES = {
   major:{deg:{0:0,2:1,4:2,5:3,7:4,9:5,11:6}, dia:[["C","maj7"],["D","m7"],["E","m7"],["F","maj7"],["G","7"],["A","m7"],["B","m7b5"]], fn:["T","S","T","S","D","T","D"]},
   minor:{deg:{0:0,2:1,3:2,5:3,7:4,8:5,10:6,11:7}, dia:[["C","m7"],["D","m7b5"],["E♭","maj7"],["F","m7"],["G","7"],["A♭","maj7"],["B♭","7"],["B","dim7"]], fn:["T","S","T","S","D","S","D","D"]}
 };
-const MD = () => MODES[isMinor()?"minor":"major"];
-const degOf = pc => MD().deg[pc];
-const FUNC_OF = d => d==null? null : MD().fn[d];
+// chord qualities that count as "the diatonic chord" on each scale degree
+const DIA_Q = {
+  major:[["","maj7","6"],["m","m7","m6"],["m","m7"],["","maj7","6"],["","7","7sus4","7b9"],["m","m7"],["m7b5","dim7"]],
+  minor:[["m","m7","m6","mM7"],["m7b5"],["","maj7","6"],["m","m7","m6"],["","7","7sus4","7b9","m","m7"],["","maj7","6"],["","7"],["dim7"]]
+};
 const FUNC_NAME = {T:"トニック",S:"サブドミナント",D:"ドミナント"};
-const isMinorQ = q => ["m","m7","m6","m7b5"].includes(q);
+const ROMAN = ["I","♭II","II","♭III","III","IV","#IV","V","♭VI","VI","♭VII","VII"];
+const isDomQ = q => ["7","7b9","7sus4"].includes(q);
+const isMinorish = q => ["m","m7","m6","m7b5","mM7"].includes(q);
+const HOME = () => ({tonic:"C", pc:0, minor:isMinor()});
+function keyAt(beat){
+  const r=(song.regions||[]).find(r=>beat>=r.b0-1e-6 && beat<r.b1-1e-6);
+  return r ? {tonic:r.tonic, pc:rootPc(r.tonic), minor:r.minor} : HOME();
+}
+const keyOfCell = i => keyAt(state.chords[i].s);
+const MDk = K => MODES[K.minor?"minor":"major"];
+const spell = (li, pc) => { const a=mod(pc-NAT[li]+6)-6; return Math.abs(a)>1 ? MANUAL_ROOTS[mod(pc)] : LETTERS[li]+(a>0?"#".repeat(a):"♭".repeat(-a)); };
+// a note name `steps` letters and `semis` semitones above `name` (a fifth up = 4 steps, 7 semitones)
+function upIv(name, steps, semis){ const s=parseSpelled(name); return spell(mod(s.li+steps,7), rootPc(name)+semis); }
+// the note `iv` semitones above a chord root, spelled as that interval (a 3rd is two letters up, a 7th six)
+const IV_STEPS=[0,1,1,2,2,3,3,4,5,5,6,6];
+const noteAbove = (root, iv, flatFive) => upIv(root, iv===6&&flatFive ? 4 : IV_STEPS[iv], iv);
+const inKey = (name, K) => K.tonic==="C" ? name : upIv(name, LETTERS.indexOf(K.tonic[0]), K.pc);
+const KC = (K,root,q) => ({root:inKey(root,K), q});
+const relPc = (c,K) => mod(rootPc(c.root)-K.pc);
+const ROMAN_SHARP = ["I","#I","II","#II","III","IV","#IV","V","#V","VI","#VI","VII"];
+// a diminished chord that climbs a semitone into the next chord is named from below (#I°7), otherwise from above (♭III°7)
+const romanOf = (c,K,next) => (c.q==="dim7" && next && next.root && mod(rootPc(next.root)-rootPc(c.root))===1 ? ROMAN_SHARP : ROMAN)[relPc(c,K)] + Q[c.q].show + (c.bass && rootPc(c.bass)!==rootPc(c.root) ? "/"+ROMAN[mod(rootPc(c.bass)-K.pc)] : "");
+// What a chord is in key K: a diatonic chord with a function (T/S/D), a secondary dominant,
+// a chord borrowed from the parallel key, a tritone substitute, a passing diminished, or none of these.
+function analyze(c, K, next){
+  if(!c || !c.root) return {fn:null, kind:"none", roman:"", d:null};
+  const mode=K.minor?"minor":"major", other=K.minor?"major":"minor";
+  const M=MODES[mode], p=relPc(c,K), d=M.deg[p], roman=romanOf(c,K,next), dom=isDomQ(c.q);
+  if(song.blues && dom && [0,5,7].includes(p)) return {fn:{0:"T",5:"S",7:"D"}[p], kind:"dia", roman, d};
+  if(d!=null && DIA_Q[mode][d].includes(c.q)) return {fn:M.fn[d], kind:"dia", roman, d};
+  if(dom && M.deg[mod(p+5)]!=null){ const t=ROMAN[mod(p+5)];
+    return {fn:null, kind:"sec", roman, d:null, alt:`V7/${t}`, note:`${t} へ向かうセカンダリードミナント`}; }
+  const od=MODES[other].deg[p];
+  if(od!=null && DIA_Q[other][od].includes(c.q))
+    return {fn:MODES[other].fn[od], kind:"bor", roman, d:null, note:K.minor?"同主長調からの借用":"同主短調からの借用"};
+  if(dom && M.deg[mod(p-1)]!=null){ const t=ROMAN[mod(p-1)];
+    return {fn:null, kind:"sub", roman, d:null, alt:`subV7/${t}`, note:`${t} へ半音で下りる裏コード`}; }
+  if(c.q==="dim7") return {fn:null, kind:"dim", roman, d:null, note:"経過的なディミニッシュ"};
+  return {fn:null, kind:"other", roman, d:null};
+}
+const fnOfCell = (c) => analyze(c, keyAt(c.s)).fn;
+const fnText = A => A.fn ? `<b>${A.fn}</b> ${FUNC_NAME[A.fn]}${A.kind==="bor"?"（借用）":""}` : A.note ? esc(A.note) : "<b>—</b>";
+const fnMark = A => A.fn || (A.kind==="sec"||A.kind==="sub" ? "→" : A.kind==="dim" ? "°" : "—");
 
-function bassOptions(i){
-  const u=state.chords[i], prev=state.chords[i-1], out=[], seen=new Set();
+// ---------- techniques: every chord the app proposes, generated in one place ----------
+const TECH = {
+  seventh:{name:"4和音にする", short:"4和音", desc:"三和音に7度や6度を加えて、響きを厚くする。いちばん安全なリハモ。"},
+  func:   {name:"同じ機能で置き換える", short:"代理", desc:"同じ機能（T・S・D）をもつ別のダイアトニック・コードに置き換える。V のあとの I を VIm にすると偽終止になる。"},
+  bass:   {name:"ベースを動かす（分数コード）", short:"分数", desc:"コードはそのままに、ベースの音だけを変える。転回形でなめらかにつなぐ、ベースを1音ずつ動かす、同じベースを保つ（ペダル）など。"},
+  toward: {name:"次のコードへ向かう", short:"向かう", desc:"次のコードを一時的な I とみなし、その V7 や II を置く。枠を2つに分けて II–V にすることもできる。"},
+  chrom:  {name:"半音で近づく", short:"半音", desc:"裏コード（♭II7）やディミニッシュで、ベースを半音で動かして次のコードへつなぐ。"},
+  borrow: {name:"借りてくる", short:"借用", desc:"同じ主音の短調（短調の曲なら長調）からコードを借りて、陰りや明るさを足す。"},
+};
+const TECH_ORDER = ["seventh","func","bass","toward","chrom","borrow"];
+// labels saved on cells by earlier versions → technique id
+const TECH_ALIAS = {"4和音化":"seventh","ダイアトニック代理":"func","分数コード（ベースを動かす）":"bass","セカンダリードミナント":"toward","リレイテッド II":"toward",
+  "着地点へ":"toward","裏コード":"chrom","パッシング・ディミニッシュ":"chrom","同主短調からの借用":"borrow","同主長調からの借用":"borrow"};
+const techId = label => { if(!label) return null; const k=TECH_ORDER.find(t=>TECH[t].short===label); return k || TECH_ALIAS[label] || (/^逆算/.test(label)?"toward":null); };
+const ckey = c => rootPc(c.root)+"|"+c.q+"|"+bassPc(c);
+
+function bassOptions(i, K){
+  const u=state.chords[i], prev=state.chords[i-1], out=[], seen=new Set(); K = K || keyOfCell(i);
   if(!u || !u.root) return out;
   const r=rootPc(u.root), cts=Object.keys(Q[u.q].ct).map(Number).map(iv=>mod(r+iv)), tns=Object.keys(Q[u.q].tn).map(Number).map(iv=>mod(r+iv));
-  const scale=new Set(Object.keys(MD().deg).map(Number));
+  const scale=new Set(Object.keys(MDk(K).deg).map(n=>mod(+n+K.pc)));
   const add=(bpc,name)=>{ if(bpc===r && !u.bass) return; if(bpc===bassPc(u)) return; if(seen.has(bpc)) return; seen.add(bpc);
-    const c={root:u.root, q:u.q}; if(bpc!==r) c.bass=MANUAL_ROOTS[bpc]; out.push({c,name}); };
+    const c={root:u.root, q:u.q}; if(bpc!==r) c.bass=noteAbove(u.root, mod(bpc-r), 6 in Q[u.q].ct); out.push({c,name}); };
   if(u.bass) add(r,"基本形に戻す（ベース＝根音）");
   const ivName={3:"3度",4:"3度",6:"5度",7:"5度",8:"5度",9:"6度",10:"7度",11:"7度"};
   cts.filter(p=>p!==r).forEach(p=>add(p, `転回形（${ivName[mod(p-r)]||"和音の音"}がベース）`));
   if(prev && prev.root){ const pb=bassPc(prev);
     [1,2].forEach(st=>{ const p=mod(pb-st); if(scale.has(p) && (cts.includes(p)||tns.includes(p))) add(p, `下降ベース（前のベース ${droot(MANUAL_ROOTS[pb])} から下がる）`); });
     [1,2].forEach(st=>{ const p=mod(pb+st); if(scale.has(p) && (cts.includes(p)||tns.includes(p))) add(p, `上行ベース（前のベース ${droot(MANUAL_ROOTS[pb])} から上がる）`); });
-    add(pb, `ペダル（前のベース ${droot(MANUAL_ROOTS[pb])} を保つ）`);
+    if(cts.includes(pb)||tns.includes(pb)) add(pb, `ペダル（前のベース ${droot(MANUAL_ROOTS[pb])} を保つ）`);
   }
-  if(r!==0) add(0, "主音ペダル（ベースを主音に保つ）");
-  const d=degOf(r);
-  if(isDomQ(u.q) || (u.q==="" && d===4)){
-    const c={root:MANUAL_ROOTS[mod(r+10)], q:"", bass:MANUAL_ROOTS[r]};
+  if(r!==K.pc && (cts.includes(K.pc)||tns.includes(K.pc))) add(K.pc, "主音ペダル（ベースを主音に保つ）");
+  const A=analyze(u,K);
+  if(isDomQ(u.q) || (u.q==="" && A.fn==="D")){
+    const c={root:upIv(u.root,6,10), q:"", bass:u.root};
     if(!same(c,u)) out.push({c, name:"IV/V の形（V の上に ♭VII の和音・柔らかいドミナント）"});
   }
   return out;
 }
+// chords that lead to X: its dominant, its II, its tritone substitute, the diminished a semitone below
+const domOf  = X => ({root:upIv(X.root,4,7),  q:isMinorish(X.q)?"7b9":"7"});
+const twoOf  = X => ({root:upIv(X.root,1,2),  q:isMinorish(X.q)?"m7b5":"m7"});
+const subOf  = X => ({root:upIv(X.root,1,1),  q:"7"});
+const dimTo  = X => ({root:upIv(X.root,6,11), q:"dim7"});
+// Every proposal for cell i, based on the chord that is there now (the original chord if the cell is empty).
+// Items: {tech, c, name} or, for proposals that divide the cell in two, {tech, split:[first, second], name}
+// where a null half keeps the current chord.
+function techniques(i){
+  const u=state.chords[i], base=(u&&u.root)?u:origAt(i), K=keyOfCell(i), next=state.chords[i+1], prev=state.chords[i-1];
+  if(!base || !base.root) return [];
+  const A=analyze(base,K), M=MDk(K), mi=K.minor, C=(r,q)=>KC(K,r,q), R=q=>({root:base.root, q});
+  const out=[], seen=new Set([ckey(base)]);
+  const add=(tech,c,name)=>{ const k=ckey(c); if(seen.has(k)) return; seen.add(k); out.push({tech,c,name}); };
+  const addSplit=(tech,a,b,name)=>{ if(u.l<2) return; const k="s"+ckey(a||base)+">"+ckey(b||base); if(seen.has(k)) return; seen.add(k); out.push({tech, split:[a,b], name}); };
+  const p=relPc(base,K);
+  // 4和音にする
+  if(base.q===""){
+    if(A.fn==="D" && !(mi&&A.d===6)){ add("seventh",R("7"),"7th を足す"); add("seventh",R("7sus4"),"sus4 にする"); if(mi) add("seventh",R("7b9"),"♭9 を足す"); }
+    else if((mi&&A.d===6) || (A.kind==="bor"&&p===10)) add("seventh",R("7"),"7th を足す");
+    else if(A.kind==="dia" || A.kind==="bor"){ add("seventh",R("maj7"),"長7度を足す"); add("seventh",R("6"),"6度を足す"); }
+    else if(M.deg[mod(p+5)]!=null) add("seventh",R("7"),`7th を足す（${ROMAN[mod(p+5)]} へのセカンダリードミナント）`);
+  }
+  if(base.q==="m" && (A.kind==="dia"||A.kind==="bor")){
+    add("seventh",R("m7"),"短7度を足す");
+    if((mi&&(A.d===0||A.d===3)) || (!mi&&A.d===1) || A.kind==="bor") add("seventh",R("m6"),"6度を足す");
+    if(mi&&A.d===0) add("seventh",R("mM7"),"長7度を足す");
+  }
+  if(base.q==="7"){ add("seventh",R("7sus4"),"sus4 にする"); add("seventh",R("7b9"),"♭9 を足す"); }
+  // 同じ機能で置き換える
+  if(A.kind==="dia" && A.fn){
+    const afterD = prev && prev.root && analyze(prev,keyAt(prev.s)).fn==="D";
+    M.fn.forEach((x,j)=>{ if(x!==A.fn || j===A.d) return; const c=C(...M.dia[j]);
+      const decept = A.d===0 && j===5 && afterD;
+      add("func", c, decept ? `偽終止（V → ${romanOf(c,K)}）` : `${FUNC_NAME[A.fn]}の仲間（${romanOf(c,K)}）`); });
+  }
+  // ベースを動かす
+  bassOptions(i,K).forEach(x=>add("bass", x.c, x.name));
+  // 次のコードへ向かう
+  if(next && next.root){
+    const ns=sym(next), V=domOf(next), II=twoOf(next), toTonic=mod(rootPc(next.root)-keyAt(next.s).pc)===0;
+    add("toward", V, `次の ${ns} への V7（${toTonic?"ドミナント":"セカンダリードミナント"}）`);
+    add("toward", II, `次の ${ns} への II`);
+    if(isDomQ(base.q)){ const ii={root:upIv(base.root,4,7), q:base.q==="7b9"?"m7b5":"m7"};
+      addSplit("toward", ii, null, `II–V に分ける（前半を ${sym(ii)} に）`); }
+    if(!same(V,base)) addSplit("toward", null, V, `後半だけ ${sym(V)} にする（${ns} へ向かう）`);
+    addSplit("toward", II, V, `II–V にする（${ns} へ向かう）`);
+  } else if(isDomQ(base.q)){ const ii={root:upIv(base.root,4,7), q:base.q==="7b9"?"m7b5":"m7"};
+    addSplit("toward", ii, null, `II–V に分ける（前半を ${sym(ii)} に）`); }
+  // 半音で近づく
+  if(next && next.root){ const ns=sym(next);
+    add("chrom", subOf(next), `裏コード（${ns} へ半音下行）`);
+    if(rootPc(dimTo(next).root)!==rootPc(base.root)) add("chrom", dimTo(next), `パッシング・ディミニッシュ（${ns} へ半音上行）`);
+  }
+  if(isDomQ(base.q)) add("chrom", {root:upIv(base.root,4,6), q:"7"}, "この V7 の裏コード");
+  // 借りてくる
+  if(A.fn){
+    const b = !mi ? {T:[["E♭","maj7","♭IIImaj7"],["A♭","maj7","♭VImaj7"]], S:[["F","m6","IVm6"],["F","m7","IVm7"],["B♭","7","♭VII7"],["D","m7b5","IIm7(♭5)"],["A♭","maj7","♭VImaj7"]], D:[["G","7b9","V7(♭9)"],["B♭","7","♭VII7（バックドア）"]]}[A.fn]
+                  : {T:[["C","","I（長調の主和音）"],["C","maj7","Imaj7"]], S:[["F","7","IV7（ドリアの IV）"],["F","","IV"],["D","m7","IIm7"]], D:[["G","7sus4","V7sus4"]]}[A.fn];
+    b.forEach(([r,q,n])=>add("borrow", C(r,q), n));
+  }
+  return out;
+}
+// the two chords a split proposal leaves in the cell
+const splitPair = (it,i) => { const u=state.chords[i], b=(u&&u.root)?u:origAt(i); return [it.split[0]||{root:b.root,q:b.q,bass:b.bass}, it.split[1]||{root:b.root,q:b.q,bass:b.bass}]; };
+function itemVerdict(it,i){
+  if(!it.split) return verdict(rolesFor(it.c,i));
+  const u=state.chords[i], a=Math.ceil(u.l/2), [c1,c2]=splitPair(it,i);
+  const vs=[verdict(rolesSpan(c1,u.s,a)), verdict(rolesSpan(c2,u.s+a,u.l-a))];
+  return vs.includes("bad")?"bad":vs.includes("ok")?"ok":"good";
+}
+function applyItem(i, it){
+  const label = it.label!=null ? it.label : TECH[it.tech].short;
+  if(!it.split){ setChord(i, it.c, label); return; }
+  const [c1,c2]=splitPair(it,i); splitUnit(i,true);
+  const put=(k,c,changed)=>{ const u=state.chords[k]; state.chords[k]={s:u.s, l:u.l, root:c.root, q:c.q, ...(c.bass&&rootPc(c.bass)!==rootPc(c.root)?{bass:c.bass}:{}), tech:changed?label:u.tech}; };
+  put(i,c1,!!it.split[0]); put(i+1,c2,!!it.split[1]);
+  save(); render();
+}
+// groups for the 置き換え候補 / コード候補 tab
 function suggest(i){
   if(state.harm) return harmSuggest(i);
-  const orig = origAt(i), next = state.chords[i+1] || null;
-  const d = degOf(rootPc(orig.root)), f = FUNC_OF(d), mi = isMinor();
-  const groups = [];
-  const C = (root,q)=>({root,q});
-  if(d!=null){
-    const g=[C(...MD().dia[d])];
-    if(!mi){
-      if(d===0||d===3) g.push(C(orig.root,"6"));
-      if(d===4) g.push(C("G","7sus4"));
-      if(d===1) g.push(C("D","m6"));
-    } else {
-      if(d===0) g.push(C("C","m6"),C("C","mM7"));
-      if(d===3) g.push(C("F","m6"));
-      if(d===4) g.push(C("G","7b9"),C("G","7sus4"));
-    }
-    groups.push({tech:"4和音化", desc:"三和音に7度や6度を加えて、響きを厚くする。", items:g});
-    const fam = MD().fn.map((x,j)=>x===f?j:-1).filter(j=>j>=0 && j!==d);
-    groups.push({tech:"ダイアトニック代理", desc:`同じ機能（${FUNC_NAME[f]}）をもつ別のダイアトニック・コードに置き換える。`, items:fam.map(x=>C(...MD().dia[x]))});
-  }
-  if(next){
-    const np = rootPc(next.root), nm = isMinorQ(next.q), ns = sym(next);
-    const sd=[C(MANUAL_ROOTS[mod(np+7)],"7")]; if(nm) sd.push(C(MANUAL_ROOTS[mod(np+7)],"7b9"));
-    groups.push({tech:"セカンダリードミナント", desc:`次の ${ns} を一時的な主和音とみなし、その V7 を置く。`, items:sd});
-    groups.push({tech:"リレイテッド II", desc:`次の ${ns} へ向かう II–V の「II」を置く。`, items:[C(MANUAL_ROOTS[mod(np+2)], nm?"m7b5":"m7")]});
-    const tt=[C(FLAT[mod(np+1)],"7")];
-    if(orig.q==="7") tt.push(C(FLAT[mod(rootPc(orig.root)+6)],"7"));
-    groups.push({tech:"裏コード", desc:`V7 を増4度離れた 7th コードに替える。ベースが半音下行で ${ns} に解決する。`, items:tt});
-    if(mod(np-1)!==rootPc(orig.root))
-      groups.push({tech:"パッシング・ディミニッシュ", desc:`${ns} の半音下に dim7 を置き、ベースを半音上行でつなぐ。`, items:[C(SHARP[mod(np-1)],"dim7")]});
-  }
-  if(f){
-    if(!mi){
-      const b = {T:[C("E♭","maj7"),C("A♭","maj7")], S:[C("F","m6"),C("F","m7"),C("D","m7b5"),C("B♭","7"),C("A♭","maj7")], D:[C("B♭","7"),C("G","7b9")]}[f];
-      groups.push({tech:"同主短調からの借用", desc:`同じ主音の短調（${keyLabel(xp.name)}m）からコードを借りて、陰りを加える。`, items:b});
-    } else {
-      const b = {T:[C("C",""),C("C","maj7"),C("A","m7b5")], S:[C("F","7"),C("F",""),C("D","m7")], D:[C("G","7"),C("G","7sus4")]}[f];
-      groups.push({tech:"同主長調からの借用", desc:`同じ主音の長調（${keyLabel(xp.name)}）や旋律的短音階からコードを借りて、明るさを差す。`, items:b});
-    }
-  }
-  // dedupe
-  const seen = new Set([rootPc(orig.root)+orig.q]);
-  groups.forEach(g=>{ g.items = g.items.filter(c=>{ const k=rootPc(c.root)+c.q; if(seen.has(k)) return false; seen.add(k); return true; }); });
-  const bo=bassOptions(i).map(x=>x.c);
-  if(bo.length) groups.push({tech:"分数コード（ベースを動かす）", desc:"コードはそのままに、ベースの音だけを変える。転回形でなめらかにつなぐ、ベースを1音ずつ動かす、同じベースを保つ（ペダル）など。", items:bo});
-  return groups.filter(g=>g.items.length);
+  const list=techniques(i);
+  return TECH_ORDER.map(t=>({tech:t, title:TECH[t].name, desc:TECH[t].desc, items:list.filter(x=>x.tech===t)})).filter(g=>g.items.length);
 }
-
 
 // ---------- harmonize-from-melody suggestions ----------
 const TRIADS = { major:[["C",""],["D","m"],["E","m"],["F",""],["G",""],["A","m"]],
@@ -732,26 +849,28 @@ const TRIADS = { major:[["C",""],["D","m"],["E","m"],["F",""],["G",""],["A","m"]
 function fitScore(c,i){ const rs=rolesFor(c,i), v=verdict(rs);
   return (v==="good"?100:v==="ok"?50:0) + rs.filter(r=>r.strong&&r.kind==="ct").length*10 + rs.filter(r=>r.kind==="ct").length; }
 function harmSuggest(i){
-  const C=(root,q)=>({root,q}), cur=state.chords[i], next=state.chords[i+1], groups=[], mode=isMinor()?"minor":"major";
-  const dia=[...TRIADS[mode].map(x=>C(...x)), ...MD().dia.map(x=>C(...x))];
-  const ranked=dia.map(c=>({c, sc:fitScore(c,i)})).filter(x=>x.sc>=50).sort((a,b)=>b.sc-a.sc).slice(0,8).map(x=>x.c);
-  groups.push({tech:"旋律に合うダイアトニック・コード", desc:"この枠の旋律がよく収まる、調の中のコードを合う順に並べています。強拍の音が和声音になるものほど上です。", items:ranked});
+  const K=keyOfCell(i), C=(r,q)=>KC(K,r,q), cur=state.chords[i], next=state.chords[i+1], groups=[], mode=K.minor?"minor":"major";
+  const dia=[...TRIADS[mode].map(x=>C(...x)), ...MDk(K).dia.map(x=>C(...x))];
+  const ranked=dia.map(c=>({c, sc:fitScore(c,i)})).filter(x=>x.sc>=50).sort((a,b)=>b.sc-a.sc).slice(0,8).map(x=>({c:x.c, name:romanOf(x.c,K)}));
+  groups.push({tech:"dia", label:"ダイアトニック", title:"旋律に合うダイアトニック・コード", desc:"この枠の旋律がよく収まる、調の中のコードを合う順に並べています。骨格の音が和声音になるものほど上です。", items:ranked});
   if(next && next.root){
-    const np=rootPc(next.root), nm=isMinorQ(next.q), ns=sym(next);
-    groups.push({tech:"次のコードへ向かう", desc:`次の ${ns} へ引き寄せるコード（セカンダリードミナント、リレイテッド II、裏コード、パッシング・ディミニッシュ）。`,
-      items:[C(MANUAL_ROOTS[mod(np+7)], nm?"7b9":"7"), C(MANUAL_ROOTS[mod(np+2)], nm?"m7b5":"m7"), C(FLAT[mod(np+1)],"7"), C(SHARP[mod(np-1)],"dim7")]});
+    const ns=sym(next);
+    groups.push({tech:"toward", title:"次のコードへ向かう", desc:`次の ${ns} へ引き寄せるコード（V7、II、裏コード、パッシング・ディミニッシュ）。`,
+      items:[{c:domOf(next),name:`${ns} への V7`},{c:twoOf(next),name:`${ns} への II`},{c:subOf(next),name:"裏コード"},{c:dimTo(next),name:"パッシング・ディミニッシュ"}]});
   }
-  const bor = mode==="major" ? [C("F","m6"),C("D","m7b5"),C("B♭","7"),C("A♭","maj7"),C("E♭","maj7")] : [C("F","7"),C("C",""),C("D","m7"),C("A","m7b5")];
-  groups.push({tech:mode==="major"?"同主短調からの借用":"同主長調からの借用", desc:"旋律に合う借用和音だけを出しています。", items:bor.filter(c=>verdict(rolesFor(c,i))!=="bad")});
-  const seen=new Set(cur&&cur.root?[rootPc(cur.root)+cur.q]:[]);
-  groups.forEach(g=>{ g.items=g.items.filter(c=>{ const k=rootPc(c.root)+c.q; if(seen.has(k)) return false; seen.add(k); return true; }); });
-  const bo=bassOptions(i).map(x=>x.c);
-  if(bo.length) groups.push({tech:"分数コード（ベースを動かす）", desc:"置いたコードのベースだけを変えて、ベースラインをなめらかにする。", items:bo});
+  const bor = mode==="major" ? [["F","m6","IVm6"],["D","m7b5","IIm7(♭5)"],["B♭","7","♭VII7"],["A♭","maj7","♭VImaj7"],["E♭","maj7","♭IIImaj7"]] : [["F","7","IV7"],["C","","I"],["D","m7","IIm7"]];
+  groups.push({tech:"borrow", title:"借りてくる", desc:"同じ主音の短調（長調）から借りるコードのうち、旋律に合うものだけを出しています。",
+    items:bor.map(([r,q,n])=>({c:C(r,q),name:n})).filter(x=>verdict(rolesFor(x.c,i))!=="bad")});
+  const seen=new Set(cur&&cur.root?[ckey(cur)]:[]);
+  groups.forEach(g=>{ g.items=g.items.filter(x=>{ const k=ckey(x.c); if(seen.has(k)) return false; seen.add(k); return true; }); });
+  const bo=bassOptions(i,K);
+  if(bo.length) groups.push({tech:"bass", title:TECH.bass.name, desc:"置いたコードのベースだけを変えて、ベースラインをなめらかにする。", items:bo});
+  groups.forEach(g=>g.items.forEach(x=>{ x.tech=g.tech; x.label = g.tech=="dia" ? "" : TECH[g.tech].short; }));
   return groups.filter(g=>g.items.length);
 }
 // ---------- state ----------
 function store0(k){ try{ return JSON.parse(localStorage.getItem(k)); }catch(e){ return null; } }
-const state = {songId:"twinkle", chords:[], sel:0, bpm:88, melOn:true, tab:"rev", harm:!!store0("rehamo:harm"), reveal:false};
+const state = {songId:"twinkle", chords:[], sel:0, bpm:88, melOn:true, tab:"rev", harm:!!store0("rehamo:harm"), reveal:false, roman:!!store0("rehamo:roman")};
 let rev = {target:null, chain:[]};   // chain: [{i, prev}] from the target backwards
 const openTech = new Set();
 let song;
@@ -771,13 +890,26 @@ function loadSong(id){
     && Math.abs(saved.reduce((a,u)=>a+u.l,0)-total)<1e-6;
   state.chords = okSaved ? saved : (state.harm ? emptyUnits() : origUnits());
   state.sel=0; rev={target:null, chain:[]}; store.set("rehamo:last", id);
+  hist={undo:[], redo:[], last:JSON.stringify(state.chords)}; histButtons();
   $("#editSong").hidden = !song.custom; render();
 }
 const tabKey = () => state.harm?"rehamo:tab:h":"rehamo:tab";
 const restoreTab = () => { state.tab = store.get(tabKey()) || "guide"; };
 const saveKey = id => (state.harm?"rehamo:h:":"rehamo:")+id;
 const emptyUnits = () => Array.from({length:song.nbars},(x,b)=>({s:b*song.bpb, l:song.bpb, root:null, q:null}));
-function save(){ store.set(saveKey(state.songId), state.chords); }
+let hist={undo:[], redo:[], last:null};
+function save(){
+  const snap=JSON.stringify(state.chords);
+  if(hist.last!=null && snap!==hist.last){ hist.undo.push(hist.last); if(hist.undo.length>200) hist.undo.shift(); hist.redo=[]; }
+  hist.last=snap; store.set(saveKey(state.songId), state.chords); histButtons();
+}
+function histGo(dir){
+  const from=dir<0?hist.undo:hist.redo, to=dir<0?hist.redo:hist.undo; if(!from.length) return;
+  stop(); to.push(hist.last); hist.last=from.pop(); state.chords=JSON.parse(hist.last);
+  rev={target:null, chain:[]}; state.sel=Math.min(state.sel, state.chords.length-1);
+  store.set(saveKey(state.songId), state.chords); histButtons(); render();
+}
+function histButtons(){ $("#undoBtn").disabled=!hist.undo.length; $("#redoBtn").disabled=!hist.redo.length; }
 function setChord(i, c, tech){
   const u=state.chords[i], o=origAt(i);
   state.chords[i] = !state.harm && same(c,o) && sameCell(u,o) ? {s:u.s, l:u.l, root:o.root, q:o.q} : {s:u.s, l:u.l, root:c.root, q:c.q, tech};
@@ -800,11 +932,11 @@ function shiftRev(from, by){
   if(rev.target!=null && rev.target>=from) rev.target+=by;
   rev.chain.forEach(e=>{ if(e.i>=from) e.i+=by; });
 }
-function splitUnit(i){
+function splitUnit(i, quiet){   // quiet: the caller goes on editing and saves once at the end
   const u=state.chords[i]; if(u.l<2) return;
   const a=Math.ceil(u.l/2);
   state.chords.splice(i,1,{...u, l:a},{...u, s:u.s+a, l:u.l-a, tech:u.tech||"分割"});
-  shiftRev(i+1,1); save();
+  shiftRev(i+1,1); if(!quiet) save();
 }
 function canMerge(i){ const u=state.chords[i], v=state.chords[i+1];
   return v && Math.floor(u.s/song.bpb)===Math.floor(v.s/song.bpb); }
@@ -962,7 +1094,7 @@ function systemSvg(b0,bars,first,last,clefW,bps,units,M){
   const groups=beamGroups(sn), beamed=new Set(groups.flat().map(n=>n.idx));
   sn.forEach(n=>{
     const ui=unitAt(n.start), u=state.chords[ui];
-    const r={...n, ...roleOf(u,n.midi), strong:n.start<=u.s+1e-6};
+    const r={...n, ...roleOf(u,n.midi,keyAt(n.start).pc), strong:isStrong(n,u.s,u.l)};
     if(!u.root) r.strong = skelIdx(ui).has(n.idx);
     const x=M.x(n.start), p=staffPos(n.midi).p; pos[n.idx]={x, y:yOf(p), up:p<34};
     g+=noteSvg(r, x, beamed.has(n.idx));
@@ -1042,8 +1174,8 @@ function vfSystem(b0,bars,first,last,bps,units){
     const tk=[], heads=[], tups=[]; let trip=[], tripDur=0;
     evs.forEach(e=>{
       let kind="pk", strong=false, label="";
-      if(!e.rest && e.start>=0){ const ui=unitAt(e.start), u=state.chords[ui], r=roleOf(u,e.n.midi);
-        kind=r.kind; label=r.label; strong = u.root ? e.start<=u.s+1e-6 : skelIdx(ui).has(e.n.idx); }
+      if(!e.rest && e.start>=0){ const ui=unitAt(e.start), u=state.chords[ui], r=roleOf(u,e.n.midi,keyAt(e.start).pc);
+        kind=r.kind; label=r.label; strong = u.root ? isStrong(e.n,u.s,u.l) : skelIdx(ui).has(e.n.idx); }
       const parts=splitDur(Math.min(e.dur, sg.t1-e.start)); let prev=null;
       parts.forEach(([d,code,isT],pi)=>{
         const sn = e.rest ? new V.StaveNote({keys:[bpb===3&&code==="w"?"d/5":"b/4"], duration:code+"r"})
@@ -1141,7 +1273,7 @@ function render(){
       const cls = (canSet.has(i)?" can":"")+(i===state.sel?" sel":"")+(i===rev.target?" tgt":"")+(chainSet.has(i)?" chain":"")+(c.l<=1?" small":"");
       html+=`<button class="slot${cls}" data-i="${i}" aria-label="${slotName(i)} ${esc(sym(c))}">
         <span class="orig">${state.harm ? (state.reveal?`<span class="ans${same(c,o)?" hit":""}">原曲 ${esc(sym(o))}</span>`:esc(c.tech||"")) : (mod_?`<s>${esc(sym(o))}</s> ${esc(c.tech||"")}`:"")}</span>
-        <span class="chord">${esc(sym(c))}<i class="dot ${v}"></i></span>
+        <span class="chord">${esc(sym(c))}<i class="dot ${v}"></i></span>${state.roman?`<span class="rom">${c.root?esc(analyze(c,keyAt(c.s),state.chords[i+1]).roman):"&nbsp;"}</span>`:""}
       </button>`;
     });
     html+=(L?L.svg():systemSvg(b0,bars,first,last,clefW,bps,units,M))+`</div>`;
@@ -1150,38 +1282,36 @@ function render(){
   $("#summary").innerHTML = state.harm ? `<span>コードを置いた枠 <b>${changed}</b> / ${n}</span>
     <span class="pill good">○ ${cnt.good}</span><span class="pill ok">△ ${cnt.ok}</span><span class="pill bad">✕ ${cnt.bad}</span>
     <label class="chk"><input type="checkbox" id="revealOn" ${state.reveal?"checked":""}>原曲のコードを見る</label>
+    <label class="chk"><input type="checkbox" id="romanOn" ${state.roman?"checked":""}>度数を表示</label>
     ${state.reveal?`<span>原曲と同じ：<b>${match}</b> 枠（違っていても、合っていれば正解です）</span>`:""}` :
     `<span>置き換え <b>${changed}</b> / ${n} か所</span>
     <span class="pill good">○ ${cnt.good}</span><span class="pill ok">△ ${cnt.ok}</span><span class="pill bad">✕ ${cnt.bad}</span>
-    <span>${cnt.bad? "赤い点の枠は、強拍のメロディ音がコードとぶつかっています。":"強拍でぶつかっている枠はありません。"}</span>`;
+    <span>${cnt.bad? "赤い点の枠は、骨格の音（強拍や長い音）がコードとぶつかっています。":"骨格の音がぶつかっている枠はありません。"}</span>
+    <label class="chk"><input type="checkbox" id="romanOn" ${state.roman?"checked":""}>度数を表示</label>`;
   renderInsp();
 }
 
 // ---------- backward (逆算) helpers ----------
-const MR = pc => MANUAL_ROOTS[mod(pc)];
-const isDomQ = q => ["7","7b9","7sus4"].includes(q);
-const isMinorish = q => ["m","m7","m6","m7b5","mM7"].includes(q);
 const MOTION = {0:"同じ音",1:"半音上行",2:"全音上行",3:"短3度上行",4:"長3度上行",5:"5度下行（強進行）",6:"増4度",7:"5度上行",8:"長3度下行",9:"短3度下行",10:"全音下行",11:"半音下行"};
 const motion = (a,b) => MOTION[mod(bassPc(b)-bassPc(a))];
 const pcsOf = c => Object.keys(Q[c.q].ct).map(iv=>mod(rootPc(c.root)+ +iv));
 const commonTones = (a,b) => { const s=new Set(pcsOf(a)); return pcsOf(b).filter(p=>s.has(p)).length; };
 function approachOptions(X, toTarget){
-  const r=rootPc(X.root), C=(root,q)=>({root,q}), out=[];
-  const minorX=isMinorish(X.q);
+  const out=[], minorX=isMinorish(X.q), up=(steps,semis,q)=>({root:upIv(X.root,steps,semis), q});
   if(isDomQ(X.q)){
-    out.push({c:C(MR(r+7), X.q==="7b9"?"m7b5":"m7"), short:"IIm7", name:"リレイテッド II", why:`${sym(X)} と組んで II–V を作る。`});
-    out.push({c:C(MR(r+7),"7"), short:"V7/V", name:"ドミナントの連鎖", why:`${sym(X)} をさらにドミナントで引き寄せる（5度圏をさかのぼる）。`});
-    out.push({c:C(FLAT[mod(r+1)],"7"), short:"♭II7", name:"裏コード", why:`ベースが半音下行で ${sym(X)} へ。`});
+    out.push({c:up(4,7, X.q==="7b9"?"m7b5":"m7"), short:"IIm7", name:"リレイテッド II", why:`${sym(X)} と組んで II–V を作る。`});
+    out.push({c:up(4,7,"7"), short:"V7/V", name:"ドミナントの連鎖", why:`${sym(X)} をさらにドミナントで引き寄せる（5度圏をさかのぼる）。`});
+    out.push({c:up(1,1,"7"), short:"♭II7", name:"裏コード", why:`ベースが半音下行で ${sym(X)} へ。`});
   } else {
-    out.push({c:C(MR(r+7), minorX?"7b9":"7"), short:"V7", name:"ドミナント", why:`${sym(X)} の5度上の 7th。5度下行で解決する。`});
-    out.push({c:C(FLAT[mod(r+1)],"7"), short:"♭II7", name:"裏コード", why:`V7 の代わり。ベースが半音下行で ${sym(X)} へ。`});
-    out.push({c:C(MR(r+7),"7sus4"), short:"V7sus4", name:"サスフォー", why:"3度を4度に替えて、解決を少し引き延ばす。"});
-    if(minorX) out.push({c:C(MR(r+2),"m7b5"), short:"IIm7(♭5)", name:"II（短調）", why:"V を挟まず、II から直接向かう。"});
-    else out.push({c:C(MR(r+2),"m7"), short:"IIm7", name:"II", why:"V を挟まず、II から直接向かう（後で間に V を入れてもよい）。"});
+    out.push({c:up(4,7, minorX?"7b9":"7"), short:"V7", name:"ドミナント", why:`${sym(X)} の5度上の 7th。5度下行で解決する。`});
+    out.push({c:up(1,1,"7"), short:"♭II7", name:"裏コード", why:`V7 の代わり。ベースが半音下行で ${sym(X)} へ。`});
+    out.push({c:up(4,7,"7sus4"), short:"V7sus4", name:"サスフォー", why:"3度を4度に替えて、解決を少し引き延ばす。"});
+    if(minorX) out.push({c:up(1,2,"m7b5"), short:"IIm7(♭5)", name:"II（短調）", why:"V を挟まず、II から直接向かう。"});
+    else out.push({c:up(1,2,"m7"), short:"IIm7", name:"II", why:"V を挟まず、II から直接向かう（後で間に V を入れてもよい）。"});
     if(toTarget){
-      out.push({c:C(SHARP[mod(r+11)],"dim7"), short:"VII°7", name:"導音の減七", why:"ベースが半音上行で解決する。"});
-      out.push({c:C(MR(r+5),"m6"), short:"IVm6", name:"サブドミナント・マイナー", why:"同主短調の IV。柔らかく、少し切ない解決。"});
-      out.push({c:C(MR(r+10),"7"), short:"♭VII7", name:"バックドア", why:"IVm 系の 7th。全音上行でやわらかく解決する。"});
+      out.push({c:up(6,11,"dim7"), short:"VII°7", name:"導音の減七", why:"ベースが半音上行で解決する。"});
+      out.push({c:up(3,5,"m6"), short:"IVm6", name:"サブドミナント・マイナー", why:"同主短調の IV。柔らかく、少し切ない解決。"});
+      out.push({c:up(6,10,"7"), short:"♭VII7", name:"バックドア", why:"IVm 系の 7th。全音上行でやわらかく解決する。"});
     }
   }
   return out;
@@ -1196,18 +1326,18 @@ function verdictMsg(roles,v){
   const names = list => [...new Map(list.map(r=>[r.name, `${esc(r.name)}（${esc(r.label)}・${KIND_TEXT[r.kind]}）`])).values()].join("、");
   const clash = r => r.kind==="av"||r.kind==="nc";
   if(v==="none") return "コードを置くと、音符の色と下の数字で、各音がそのコードの何度になるかがわかります。";
-  if(v==="bad") return `強拍の ${names(roles.filter(r=>clash(r)&&r.strong&&!r.passing))} がぶつかっています。狙った緊張か、聴いて確かめましょう。`;
-  if(v==="ok") return `弱拍の ${names(roles.filter(r=>clash(r)&&!r.strong&&!r.passing))} は、通り過ぎる音として聞こえれば問題ありません。`;
+  if(v==="bad") return `骨格の音 ${names(roles.filter(r=>clash(r)&&r.strong&&!r.passing))} がぶつかっています。狙った緊張か、聴いて確かめましょう。`;
+  if(v==="ok") return `短い音 ${names(roles.filter(r=>clash(r)&&!r.strong&&!r.passing))} は、通り過ぎる音として聞こえれば問題ありません。`;
   return "メロディはこのコードによく収まっています。";
 }
 function selbarHtml(i){
   const c=state.chords[i], o=origAt(i), next=state.chords[i+1];
   const roles=rolesFor(c,i), v=verdict(roles);
-  const fc = state.harm ? c : o, d=fc&&fc.root?degOf(rootPc(fc.root)):null, f=FUNC_OF(d);
+  const K=keyOfCell(i), fc = c.root ? c : (state.harm ? null : o), A=analyze(fc,K,next), away=K.tonic!=="C";
   return `<div class="selrow">
     <span class="ilabel">${slotName(i)}</span>
     <span class="selchord">${esc(sym(c))}</span>
-    <div class="imeta">${state.harm&&!state.reveal?"":`<span>原曲 <b>${esc(sym(o))}</b></span>`}<span>機能 <b>${f?f:"—"}</b> ${f?FUNC_NAME[f]:""}</span><span>次 <b>${next?esc(sym(next)):"（終わり）"}</b></span></div>
+    <div class="imeta">${state.harm&&!state.reveal?"":`<span>原曲 <b>${esc(sym(o))}</b></span>`}<span>機能 ${fnText(A)}</span>${A.roman?`<span>度数 <b>${esc(A.roman)}</b>${A.alt?`（${esc(A.alt)}）`:""}</span>`:""}${away?`<span>ここは <b>${esc(droot(K.tonic))}${K.minor?"m":""}</b> に転調中</span>`:""}<span>次 <b>${next?esc(sym(next)):"（終わり）"}</b></span></div>
     <span class="selbtns">
       <button class="btn" id="hearPrev">${play&&play.mode==="prevbar"?"■ 停止":"▶ 前小節から"}</button>
       <button class="btn primary" id="hearHere">${play&&play.mode==="here"?"■ 停止":"▶ ここから"}</button>
@@ -1224,12 +1354,19 @@ function candButton(cd, i, attrs, extra){
     <span class="cn">${esc(sym(cd))}<i class="dot ${vv}"></i></span>${extra||""}
     <span class="chips">${rs.map(chipHtml).join("")}</span></button>`;
 }
+function candItem(it, i, attrs){
+  if(!it.split) return candButton(it.c, i, attrs, it.name?`<span class="oname">${esc(it.name)}</span>`:"");
+  const [c1,c2]=splitPair(it,i), vv=itemVerdict(it,i);
+  return `<button class="cand" ${attrs} title="${VERDICT_TEXT[vv]}">
+    <span class="cn">${esc(sym(c1))}<span class="arr">→</span>${esc(sym(c2))}<i class="dot ${vv}"></i></span>
+    <span class="oname">${esc(it.name)}</span><span class="owhy">枠を2つに分けます</span></button>`;
+}
 function candHtml(i){
   const c=state.chords[i], o=origAt(i);
   let h = `<div><h2>${state.harm?"コード候補":"置き換え候補"}<span>${slotName(i)}${!state.harm||state.reveal?`（原曲 ${esc(sym(o))}）`:""}</span></h2><div class="groups">`;
   suggest(i).forEach((g,gi)=>{
-    h+=`<div class="grp"><details data-tech="${esc(g.tech)}"${openTech.has(g.tech)?" open":""}><summary>${esc(g.tech)}</summary><p>${esc(g.desc)}</p></details><div class="cands">`;
-    g.items.forEach((cd,ci)=>{ h+=candButton(cd,i,`data-g="${gi}" data-c="${ci}"`); });
+    h+=`<div class="grp"><details data-tech="${esc(g.tech)}"${openTech.has(g.tech)?" open":""}><summary>${esc(g.title)}</summary><p>${esc(g.desc)}</p></details><div class="cands">`;
+    g.items.forEach((it,ci)=>{ h+=candItem(it,i,`data-g="${gi}" data-c="${ci}"`); });
     h+=`</div></div>`;
   });
   h+=`</div></div>
@@ -1283,10 +1420,8 @@ function revHtml(){
 
 // ---------- guide (harmonize step by step) ----------
 const GSTEPS = ["区切りと終わり方","コードを変える間隔","I・IV・V で埋める","流れを確かめる","ダイアトニック・コードを広げる","向かうコードと色づけ"];
-const PRIM = () => isMinor()
-  ? {I:{root:"C",q:"m"}, IV:{root:"F",q:"m"}, V:{root:"G",q:""}, V7:{root:"G",q:"7"}}
-  : {I:{root:"C",q:""},  IV:{root:"F",q:""},  V:{root:"G",q:""}, V7:{root:"G",q:"7"}};
-const PRIM_NAME = () => isMinor() ? {I:"Im",IV:"IVm",V:"V",V7:"V7"} : {I:"I",IV:"IV",V:"V",V7:"V7"};
+const PRIM = K => { const m=K.minor?"m":""; return {I:KC(K,"C",m), IV:KC(K,"F",m), V:KC(K,"G",""), V7:KC(K,"G","7")}; };
+const PRIM_NAME = K => K.minor ? {I:"Im",IV:"IVm",V:"V",V7:"V7"} : {I:"I",IV:"IV",V:"V",V7:"V7"};
 const gstepKey = () => (state.harm?"rehamo:gstep:":"rehamo:rgstep:")+state.songId;
 const gmem={};
 const getGStep = () => Math.min(state.harm?6:8, Math.max(1, gmem[gstepKey()] || store.get(gstepKey()) || 1));
@@ -1308,7 +1443,6 @@ function phrases(){
     out.push({from:b, to:e, end:unitAt(lastN?lastN.start:e*bpb), last:lastN}); }
   return out;
 }
-const strongNotes = i => notesIn(i).filter(n=>n.strong);
 // skeleton notes: weighted by how long they sound inside the cell, plus a bonus for the strong beat
 function skeletonNotes(i){
   // weight per pitch: the longest single note counts fully, repeats count half, plus strong-beat / downbeat bonuses
@@ -1325,7 +1459,7 @@ function skeletonNotes(i){
     return {...g, why: long&&g.strong?"長い・強拍": long?"長い":"強拍"}; });
 }
 const skelIdx = i => new Set(skeletonNotes(i).flatMap(g=>g.idxs));
-const solfOf = midi => SOLF[mod(midi)];
+const solfOf = (midi, tonicPc=0) => SOLF[mod(midi-tonicPc)];
 const contains = (c, pcs) => { const set=new Set(pcsOf(c)); return pcs.every(p=>set.has(p)); };
 const isHalfMeter = () => song.bpb===4;
 const rhythmNow = () => state.chords.every(u=>u.l===song.bpb) ? "bar" : "half";
@@ -1342,10 +1476,10 @@ function setRhythm(mode){
 }
 function flowIssues(){
   const out=[], U=state.chords;
-  const fn = c => c.root ? FUNC_OF(degOf(rootPc(c.root))) : null;
+  const fn = c => c.root ? fnOfCell(c) : null;
   const empties=U.map((u,i)=>i).filter(i=>!U[i].root);
   if(empties.length) out.push({kind:"warn", i:empties[0], text:`まだコードのない枠が ${empties.length} か所あります。`});
-  U.forEach((u,i)=>{ if(u.root && verdict(rolesFor(u,i))==="bad") out.push({kind:"bad", i, text:`${slotName(i)}：強拍の音が ${sym(u)} とぶつかっています。`}); });
+  U.forEach((u,i)=>{ if(u.root && verdict(rolesFor(u,i))==="bad") out.push({kind:"bad", i, text:`${slotName(i)}：骨格の音が ${sym(u)} とぶつかっています。`}); });
   for(let i=1;i<U.length;i++){
     const a=U[i-1], b=U[i];
     if(a.root && b.root && fn(a)==="D" && fn(b)==="S")
@@ -1371,9 +1505,9 @@ function fillOrder(){
   return out;
 }
 function neighborTip(i){
-  const U=state.chords, nx=U[i+1], PN=PRIM_NAME(), mi=isMinor();
+  const U=state.chords, nx=U[i+1], PN=PRIM_NAME(keyOfCell(i));
   const ph=phrases(), isStart=ph.some(p=>unitAt(p.from*song.bpb)===i);
-  if(nx && nx.root){ const d=degOf(rootPc(nx.root));
+  if(nx && nx.root){ const A=analyze(nx,keyAt(nx.s)), d=A.kind==="dia"?A.d:null;
     if(d===0) return `次が ${PN.I} なので、${PN.V}（${PN.V7}）が合いやすい所です。`;
     if(d===4) return `次が ${PN.V} なので、${PN.IV}（または ${PN.I}）が合いやすい所です。`;
     if(d===3) return `次が ${PN.IV} なので、${PN.I} から進むのが自然です。`;
@@ -1381,9 +1515,9 @@ function neighborTip(i){
   if(isStart) return `フレーズの頭は ${PN.I} で始まることが多い所です。`;
   return "";
 }
-function widenOptions(c){
-  const C=(root,q)=>({root,q}), d=degOf(rootPc(c.root)), mi=isMinor();
-  if(!mi){
+function widenOptions(c, K){
+  const C=(r,q)=>KC(K,r,q), A=analyze(c,K), d=A.kind==="dia"?A.d:null;
+  if(!K.minor){
     if(d===0) return [[C("A","m"),"VIm（I の代わり）"],[C("E","m"),"IIIm（I の代わり）"]];
     if(d===3) return [[C("D","m"),"IIm（IV の代わり）"]];
     if(d===4) return [[C("E","m"),"IIIm（V の代わり・弱め）"]];
@@ -1393,27 +1527,33 @@ function widenOptions(c){
   }
   return [];
 }
-function colorOptions(c){
-  const C=(root,q)=>({root,q}), pc=rootPc(c.root), d=degOf(pc), mi=isMinor();
-  if(d===0) return mi ? [[C("C","m7"),"Im7"],[C("C","m6"),"Im6"],[C("C","mM7"),"Im(maj7)"]]
-                      : [[C("C","maj7"),"Imaj7"],[C("C","6"),"I6"]];
-  if(d===3) return mi ? [[C("F","m7"),"IVm7"],[C("F","m6"),"IVm6"]]
-                      : [[C("F","maj7"),"IVmaj7"],[C("F","6"),"IV6"],[C("F","m6"),"IVm6（借用）"]];
-  if(d===4) return [[C("G","7"),"V7"],[C("G","7sus4"),"V7sus4"],[C("G","7b9"),"V7(♭9)"],[C("D♭","7"),"♭II7（裏コード）"]];
-  if(!mi && (d===1||d===2||d===5)) return [[C(MD().dia[d][0],"m7"),"m7 にする"]];
-  if(mi && (d===2||d===5)) return [[C(MD().dia[d][0],"maj7"),"maj7 にする"]];
+function colorOptions(c, K){
+  const C=(r,q)=>KC(K,r,q), A=analyze(c,K), d=A.kind==="dia"?A.d:null, mi=K.minor, R=q=>({root:c.root,q});
+  if(d===0) return mi ? [[R("m7"),"Im7"],[R("m6"),"Im6"],[R("mM7"),"Im(maj7)"]] : [[R("maj7"),"Imaj7"],[R("6"),"I6"]];
+  if(d===3) return mi ? [[R("m7"),"IVm7"],[R("m6"),"IVm6"]] : [[R("maj7"),"IVmaj7"],[R("6"),"IV6"],[R("m6"),"IVm6（借用）"]];
+  if(d===4) return [[R("7"),"V7"],[R("7sus4"),"V7sus4"],[R("7b9"),"V7(♭9)"],[C("D♭","7"),"♭II7（裏コード）"]];
+  if(!mi && (d===1||d===2||d===5)) return [[R("m7"),"m7 にする"]];
+  if(mi && (d===2||d===5)) return [[R("maj7"),"maj7 にする"]];
   return [];
+}
+// step-6 proposals of the harmonize guide: the dominant of the next chord first, then colours for this one
+function colorList(i){
+  const c=state.chords[i], nx=state.chords[i+1], opts=colorOptions(c, keyOfCell(i));
+  if(nx && nx.root && relPc(nx,keyAt(nx.s))!==0) opts.unshift([domOf(nx), `次の ${sym(nx)} への V7（セカンダリードミナント）`, "向かう"]);
+  return opts;
 }
 function guideHtml(){
   if(!state.harm) return rGuideHtml();
-  const step=getGStep(), i=state.sel, P=PRIM(), PN=PRIM_NAME();
+  const step=getGStep(), i=state.sel, K=keyOfCell(i), P=PRIM(K), PN=PRIM_NAME(K);
   let h=`<div class="revbox">
     <ol class="steps gsteps">${GSTEPS.map((t,k)=>`<li class="${k+1===step?"on":""}${k+1<step?" done":""}"><button data-gs="${k+1}" title="${t}" aria-label="ステップ${k+1}：${t}"${k+1===step?' aria-current="step"':""}></button></li>`).join("")}</ol>
     <h3 class="gtitle"><small>ステップ ${step} / ${GSTEPS.length}</small>${GSTEPS[step-1]}</h3>`;
   if(step===1){
-    h+=`<p class="hint">まず骨組みです。フレーズ（4小節ずつ）の最後で、曲が<b>終わる（I）</b>のか、<b>まだ続く（V）</b>のかを決めます。最後の音が「ド・ミ・ソ」なら I、「ソ・シ・レ」なら V が合います。曲の最後のフレーズは I で終えます。</p><div class="glist">`;
+    const H=HOME(), PH=PRIM(H), HN=PRIM_NAME(H), sf=c=>pcsOf(c).map(p=>SOLF[p]).join("・");
+    h+=`<p class="hint">まず骨組みです。フレーズ（4小節ずつ）の最後で、曲が<b>終わる（${HN.I}）</b>のか、<b>まだ続く（${HN.V}）</b>のかを決めます。最後の音が「${sf(PH.I)}」なら ${HN.I}、「${sf(PH.V)}」なら ${HN.V} が合います。曲の最後のフレーズは ${HN.I} で終えます。</p><div class="glist">`;
     phrases().forEach((ph,k,arr)=>{
-      const u=state.chords[ph.end], sol=ph.last?solfOf(ph.last.midi):"（休符）";
+      const Kp=keyOfCell(ph.end), P=PRIM(Kp), PN=PRIM_NAME(Kp);
+      const u=state.chords[ph.end], sol=ph.last?SOLF[mod(ph.last.midi-Kp.pc)]:"（休符）";
       const pcs=ph.last?[mod(ph.last.midi)]:[], okI=contains(P.I,pcs), okV=contains(P.V,pcs);
       const lastPh=k===arr.length-1;
       h+=`<div class="gitem"><div><b>フレーズ ${k+1}</b>（${ph.from+1}〜${ph.to+1}小節）<br><small>フレーズの最後の音：${sol}${lastPh?"・曲の終わり":""}</small></div>
@@ -1433,10 +1573,10 @@ function guideHtml(){
   if(step===3){
     const empt=state.chords.map((u,k)=>k).filter(k=>!state.chords[k].root);
     const sk=skeletonNotes(i), pcs=sk.map(n=>mod(n.midi));
-    const skTxt=sk.map(n=>`${solfOf(n.midi)}（${n.why}）`).join("・");
+    const skTxt=sk.map(n=>`${solfOf(n.midi,K.pc)}（${n.why}）`).join("・");
     const fits=["I","IV","V"].filter(k=>contains(P[k],pcs)).map(k=>PN[k]);
     const nx=state.chords[i+1], tip=neighborTip(i);
-    const each = sk.length>1 && !fits.length ? sk.map(n=>`${solfOf(n.midi)}を含む：${["I","IV","V"].filter(k=>contains(P[k],[mod(n.midi)])).map(k=>PN[k]).join("・")||"なし"}`).join("／") : "";
+    const each = sk.length>1 && !fits.length ? sk.map(n=>`${solfOf(n.midi,K.pc)}を含む：${["I","IV","V"].filter(k=>contains(P[k],[mod(n.midi)])).map(k=>PN[k]).join("・")||"なし"}`).join("／") : "";
     h+=`<p class="hint">使うのは ${PN.I}・${PN.IV}・${PN.V}（と ${PN.V7}）だけです。<b>骨格の音</b>（長い音や強拍の音）を含むコードを選びます。</p>
       <p class="hint">終止の手前から決めると楽です。「次に決める枠へ」は、①終止の直前 → ②フレーズの頭 → ③残り の順に進みます。</p>
       <div class="chainrow"><span>${slotName(i)}：骨格の音 <b>${skTxt||"なし"}</b> → ${fits.length?`含むのは <b>${fits.join("・")}</b>`:sk.length>1?`両方を含むコードはありません。<br><small>${each}。どちらを優先するか決めるか、「枠を分割」して2つのコードにします。</small>`:"含むコードはありません（いちばん近いものを）"}${tip?`<br><small class="tip">${tip}</small>`:""}</span></div>
@@ -1445,8 +1585,8 @@ function guideHtml(){
   }
   if(step===4){
     const iss=flowIssues();
-    const strip=barStrip(state.chords, (u,k)=>{ const f=u.root?FUNC_OF(degOf(rootPc(u.root))):null;
-      return `<button class="fn f-${f||"x"}${k===i?" cur":""}" data-go="${k}" title="${slotName(k)}"><b>${esc(sym(u))}</b><small>${f||"—"}</small></button>`; });
+    const strip=barStrip(state.chords, (u,k)=>{ const A=analyze(u,keyAt(u.s));
+      return `<button class="fn f-${A.fn||"x"}${k===i?" cur":""}" data-go="${k}" title="${slotName(k)}${A.note?"："+A.note:""}"><b>${esc(sym(u))}</b><small>${fnMark(A)}</small></button>`; });
     h+=`<p class="hint">T（トニック）→ S（サブドミナント）→ D（ドミナント）→ T の流れになっているかを見ます。押すとその枠を選びます。</p>
       <div class="fstrip">${strip}</div>
       ${iss.length?`<ul class="issues">${iss.map(x=>`<li class="${x.kind}"><button data-go="${x.i}">${esc(x.text)}</button></li>`).join("")}</ul>`:`<p class="hint good">気になる点はありません。「原曲のコードを見る」で答え合わせもできます。</p>`}`;
@@ -1455,7 +1595,7 @@ function guideHtml(){
     const c=state.chords[i];
     h+=`<p class="hint">I・IV・V の骨組みに、同じ働きをもつ別のコードを混ぜて動きを付けます。${isMinor()?"♭III や ♭VI は Im の、IIm7(♭5) は IVm の仲間です。":"VIm・IIIm は I の、IIm は IV の仲間です。"}骨格の音が乗るものを選びます。</p>`;
     if(!c.root) h+=`<p class="hint">この枠にはまだコードがありません。</p>`;
-    else { const opts=widenOptions(c);
+    else { const opts=widenOptions(c,K);
       h+= opts.length ? `<div class="cands">${opts.map(([cc,nm],k)=>candButton(cc,i,`data-wid="${k}"`,`<span class="oname">${esc(nm)}</span>`)).join("")}</div>`
                       : `<p class="hint">このコードには、ここでの候補はありません。I・IV・V の枠を選んでください。</p>`; }
     h+=`<p class="hint">同じコードが続く所や、フレーズの途中に使うと効果的です。終止のコードはそのままにしておきます。</p>`;
@@ -1465,9 +1605,7 @@ function guideHtml(){
     h+=`<p class="hint">仕上げに、次のコードへ引き寄せるコード（セカンダリードミナント）や、7th・6th で色を足します。</p>`;
     if(!c.root) h+=`<p class="hint">この枠にはまだコードがありません。</p>`;
     else {
-      const opts=colorOptions(c);
-      if(nx && nx.root && degOf(rootPc(nx.root))!==0){ const np=rootPc(nx.root);
-        opts.unshift([{root:MANUAL_ROOTS[mod(np+7)], q:isMinorish(nx.q)?"7b9":"7"}, `次の ${sym(nx)} への V7（セカンダリードミナント）`]); }
+      const opts=colorList(i);
       h+= opts.length ? `<div class="cands">${opts.map(([cc,nm],k)=>candButton(cc,i,`data-col="${k}"`,`<span class="oname">${esc(nm)}</span>`)).join("")}</div>`
                       : `<p class="hint">このコードには、ここでの候補はありません。「コード候補」タブを見てください。</p>`;
     }
@@ -1480,72 +1618,43 @@ function guideHtml(){
 }
 function bindGuide(el){
   if(!state.harm) return bindRGuide(el);
-  const i=state.sel, P=PRIM(), PN=PRIM_NAME();
+  const i=state.sel, K=keyOfCell(i), P=PRIM(K), PN=PRIM_NAME(K);
   const go = s => { gmem[gstepKey()]=s; store.set(gstepKey(), s); el.scrollTop=0; renderInsp(); };
   el.querySelectorAll("[data-gs]").forEach(b=>b.onclick=()=>go(+b.dataset.gs));
   const gp=$("#gPrev"), gn=$("#gNext");
   if(gp) gp.onclick=()=>go(getGStep()-1);
   if(gn) gn.onclick=()=>go(getGStep()+1);
   el.querySelectorAll("[data-cad]").forEach(b=>b.onclick=()=>{ const k=+b.dataset.cad; state.sel=k;
-    setChord(k, P[b.dataset.c], b.dataset.c==="I"?"終止":"半終止"); previewSel(); });
+    setChord(k, PRIM(keyOfCell(k))[b.dataset.c], b.dataset.c==="I"?"終止":"半終止"); previewSel(); });
   el.querySelectorAll("[data-rh]").forEach(b=>b.onclick=()=>{ setRhythm(b.dataset.rh); render(); });
   el.querySelectorAll("[data-prim]").forEach(b=>b.onclick=()=>{ const k=b.dataset.prim;
     setChord(i, P[k], PN[k]); previewSel(); });
   const ne=$("#nextEmpty"); if(ne) ne.onclick=()=>{ const k=fillOrder().find(j=>j!==i && !state.chords[j].root); if(k!=null){ state.sel=k; render(); } };
   el.querySelectorAll("[data-go]").forEach(b=>b.onclick=()=>{ state.sel=+b.dataset.go; render(); });
-  el.querySelectorAll("[data-wid]").forEach(b=>b.onclick=()=>{ const [cc,nm]=widenOptions(state.chords[i])[+b.dataset.wid];
+  el.querySelectorAll("[data-wid]").forEach(b=>b.onclick=()=>{ const [cc,nm]=widenOptions(state.chords[i],K)[+b.dataset.wid];
     setChord(i, cc, "代理"); previewSel(); });
   el.querySelectorAll("[data-col]").forEach(b=>b.onclick=()=>{
-    const c=state.chords[i], nx=state.chords[i+1], opts=colorOptions(c);
-    if(nx && nx.root && degOf(rootPc(nx.root))!==0){ const np=rootPc(nx.root); opts.unshift([{root:MANUAL_ROOTS[mod(np+7)], q:isMinorish(nx.q)?"7b9":"7"}, "セカンダリードミナント"]); }
-    const [cc,nm]=opts[+b.dataset.col]; setChord(i, cc, nm.replace(/（.*）/,"").replace(/^次の.*への /,"")); previewSel(); });
+    const [cc,nm,lab]=colorList(i)[+b.dataset.col]; setChord(i, cc, lab || nm.replace(/（.*）/,"")); previewSel(); });
   const tr=$("#toRev"); if(tr) tr.onclick=()=>{ rev={target:i, chain:[]}; state.tab="rev"; store.set(tabKey(),"rev"); render(); };
   const tc=$("#toCand"); if(tc) tc.onclick=()=>{ state.tab="cand"; store.set(tabKey(),"cand"); render(); };
 }
 
 // ---------- reharm guide ----------
-const RSTEPS = ["原曲を読む","4和音にする","同じ機能で置き換える","ベースを動かす（分数コード）","着地点へ向かう","半音で近づく","借りてくる","見直す"];
-const RTECH = {2:"4和音", 3:"代理", 4:"分数", 5:"着地点へ", 6:"半音", 7:"借用"};
+const RSTEP_TECH = {2:"seventh", 3:"func", 4:"bass", 5:"toward", 6:"chrom", 7:"borrow"};
+const RSTEPS = ["原曲を読む", ...[2,3,4,5,6,7].map(k=>TECH[RSTEP_TECH[k]].name), "見直す"];
 const RDESC = {
   1:"まず原曲の骨組みを知ります。T（安定）・S（広がり）・D（緊張）の流れと、フレーズの終わり（着地点の候補）を確かめましょう。原曲を一度聴いてから次へ進みます。",
   2:"コードに7度や6度を足して、響きを厚くします。いちばん安全なリハモです。メロディ音がテンション（青）になる所は、しゃれた響きになります。",
-  3:"同じ働きをもつ別のコードに替えます。I ↔ VIm・IIIm、IV ↔ IIm のように、メロディがよく乗るものを選びます。",
+  3:"同じ働きをもつ別のコードに替えます。I ↔ VIm・IIIm、IV ↔ IIm のように、メロディがよく乗るものを選びます。V のあとの I を VIm にすると、終わったと思わせて続ける「偽終止」になります。",
   4:"コードはそのままに、ベースの音だけを変えます。分数コード C/E は「C のコードで、ベースは E」という意味です。転回形でベースをなめらかにつなぐ、ベースを1音ずつ下げる（上げる）、同じベースを保つ（ペダル）、V の代わりに IV/V の形を使う、が代表です。楽譜の下にベースラインが出ます。",
-  5:"着地点の手前に、そこへ向かうコードを置きます。次のコードの V7（セカンダリードミナント）や II が代表です。II–V を両方入れたいときは「枠を分割」してから置きます。逆算タブで、着地点から手前へ組み立てることもできます。",
+  5:"次のコードを着地点とみなして、そこへ向かうコードを置きます。次のコードの V7（セカンダリードミナント）や II が代表です。「II–V にする」「II–V に分ける」を選ぶと、枠が2つに分かれて両方入ります。逆算タブで、着地点から手前へ組み立てることもできます。",
   6:"V7 を裏コード（♭II7）に替えたり、ディミニッシュをはさんだりして、ベースを半音で動かします。",
   7:"同じ主音の短調（短調の曲なら長調）からコードを借りて、陰りや明るさを足します。IVm や ♭VII7 が定番です。",
   8:"最後に見直します。変えすぎていないか、強拍のぶつかりが増えていないかを確かめ、原曲と聴き比べます。全部の枠を変える必要はありません。"
 };
-function rStepCands(step, i){
-  const u=state.chords[i], o=origAt(i), next=state.chords[i+1], C=(root,q)=>({root,q}), mi=isMinor();
-  const d=degOf(rootPc(o.root)), f=FUNC_OF(d), out=[];
-  const add=(c,name)=>{ if(!same(c,u)) out.push({c,name}); };
-  if(step===2){
-    if(o.q===""){ if(d===4){ add(C(o.root,"7"),"7th を足す"); add(C(o.root,"7sus4"),"sus4 にする"); }
-                  else { add(C(o.root,"maj7"),"長7度を足す"); add(C(o.root,"6"),"6度を足す"); } }
-    if(o.q==="m"){ add(C(o.root,"m7"),"短7度を足す"); if((mi&&d===0)||(!mi&&d===1)||(mi&&d===3)) add(C(o.root,"m6"),"6度を足す"); if(mi&&d===0) add(C(o.root,"mM7"),"長7度を足す"); }
-    if(o.q==="7"){ add(C(o.root,"7sus4"),"sus4 にする"); add(C(o.root,"7b9"),"♭9 を足す"); }
-  }
-  if(step===3 && d!=null){
-    MD().fn.forEach((x,j)=>{ if(x===f && j!==d) add(C(...MD().dia[j]), `${FUNC_NAME[f]}の仲間`); });
-  }
-  if(step===4) bassOptions(i).forEach(x=>{ if(!same(x.c,u)) out.push(x); });
-  if((step===5||step===6) && next && next.root){
-    const np=rootPc(next.root), nm=isMinorish(next.q);
-    if(step===5){ add(C(MANUAL_ROOTS[mod(np+7)], nm?"7b9":"7"), `次の ${sym(next)} への V7`); add(C(MANUAL_ROOTS[mod(np+2)], nm?"m7b5":"m7"), `次の ${sym(next)} への II`); }
-    if(step===6){ add(C(FLAT[mod(np+1)],"7"), `裏コード（${sym(next)} へ半音下行）`);
-      if(mod(np-1)!==rootPc(u.root)) add(C(SHARP[mod(np-1)],"dim7"), `パッシング（${sym(next)} へ半音上行）`); }
-  }
-  if(step===6 && isDomQ(u.q)) add(C(FLAT[mod(rootPc(u.root)+6)],"7"), "この V7 の裏コード");
-  if(step===7 && f){
-    const b = !mi ? {T:[[C("E♭","maj7"),"♭IIImaj7"],[C("A♭","maj7"),"♭VImaj7"]], S:[[C("F","m6"),"IVm6"],[C("F","m7"),"IVm7"],[C("B♭","7"),"♭VII7"],[C("D","m7b5"),"IIm7(♭5)"]], D:[[C("G","7b9"),"V7(♭9)"],[C("B♭","7"),"♭VII7（バックドア）"]]}[f]
-                  : {T:[[C("C",""),"I（長調の主和音）"],[C("C","maj7"),"Imaj7"]], S:[[C("F","7"),"IV7（ドリアの IV）"],[C("D","m7"),"IIm7"]], D:[[C("G","7sus4"),"V7sus4"]]}[f];
-    b.forEach(([c,n])=>add(c,n));
-  }
-  return out;
-}
-const rStepUsable = (step,i) => rStepCands(step,i).some(x=>verdict(rolesFor(x.c,i))==="good");
-const rStepCount = step => state.chords.filter(u=>u.tech===RTECH[step] || (step===5 && /^逆算/.test(u.tech||""))).length;
+const rStepCands = (step,i) => techniques(i).filter(x=>x.tech===RSTEP_TECH[step]);
+const rStepUsable = (step,i) => rStepCands(step,i).some(x=>itemVerdict(x,i)==="good");
+const rStepCount = step => state.chords.filter(u=>techId(u.tech)===RSTEP_TECH[step]).length;
 function cmpRange(){
   const u=state.chords[state.sel], bpb=song.bpb, nb=song.nbars;
   const bar=Math.floor(u.s/bpb), b0=Math.max(0,bar-1)*bpb, b1=Math.min(nb,bar+3)*bpb;
@@ -1566,9 +1675,9 @@ function rGuideHtml(){
   if(step===1){
     const ends=new Set(phraseEnds());
     const ou=origUnits();
-    const strip=barStrip(ou, (u,k)=>{ const f=FUNC_OF(degOf(rootPc(u.root))); const ui=unitAt(u.s);
-      return `<button class="fn f-${f||"x"}${ui===i?" cur":""}${ends.has(ui)?" end":""}" data-go="${ui}" title="${slotName(ui)}"><b>${esc(sym(u))}</b><small>${f||"—"}</small></button>`; });
-    h+=`<div class="fstrip">${strip}</div><p class="hint" style="font-size:12.5px">下線のある枠がフレーズの終わりです。押すとその枠を選びます。</p>
+    const strip=barStrip(ou, (u,k)=>{ const A=analyze(u,keyAt(u.s)), ui=unitAt(u.s);
+      return `<button class="fn f-${A.fn||"x"}${ui===i?" cur":""}${ends.has(ui)?" end":""}" data-go="${ui}" title="${slotName(ui)}${A.note?"："+A.note:""}"><b>${esc(sym(u))}</b><small>${fnMark(A)}</small></button>`; });
+    h+=`<div class="fstrip">${strip}</div><p class="hint" style="font-size:12.5px">下線のある枠がフレーズの終わりです。「→」は次のコードへ向かうコード（セカンダリードミナントなど）です。押すとその枠を選びます。</p>
       <div class="gbtns"><button class="btn small" id="cmpO">▶ 原曲を聴く</button></div>`;
   } else if(step===8){
     const n=state.chords.length, changed=state.chords.filter((u,k)=>isChanged(k)).length;
@@ -1576,7 +1685,7 @@ function rGuideHtml(){
     const iss=[];
     if(changed===0) iss.push({kind:"warn", i:0, text:"まだ何も置き換えていません。ステップ2から試してみましょう。"});
     if(changed/n>0.75) iss.push({kind:"info", i:0, text:`${n} 枠のうち ${changed} 枠を変えています。原曲の響きを残す所があると、変えた所が引き立ちます。`});
-    bads.forEach(k=>iss.push({kind:"bad", i:k, text:`${slotName(k)}：強拍の音が ${sym(state.chords[k])} とぶつかっています。狙った緊張か、聴いて確かめましょう。`}));
+    bads.forEach(k=>iss.push({kind:"bad", i:k, text:`${slotName(k)}：骨格の音が ${sym(state.chords[k])} とぶつかっています。狙った緊張か、聴いて確かめましょう。`}));
     [2,3,4,5,6,7].forEach(s=>{ const c=rStepCount(s); if(c) iss.push({kind:"good", i:null, text:`${RSTEPS[s-1]}：${c} か所`}); });
     h+=`<ul class="issues">${iss.map(x=>`<li class="${x.kind}"><button ${x.i!=null?`data-go="${x.i}"`:"disabled"}>${esc(x.text)}</button></li>`).join("")}</ul>${cmp}
       <p class="hint">気に入らない所は、枠を選んで「原曲に戻す」で戻せます。</p>`;
@@ -1584,8 +1693,8 @@ function rGuideHtml(){
     const opts=rStepCands(step,i), usable=state.chords.map((u,k)=>k).filter(k=>rStepUsable(step,k));
     const cnt=rStepCount(step), goal=step===5||step===6?1:2;
     h+=`<div class="chainrow"><span>課題：この段階の手法を ${goal} か所で使ってみよう（いま ${cnt}）${cnt>=goal?" <b class='okmark'>✓ 達成</b>":""}</span></div>
-      <h3 class="sub">${slotName(i)}（原曲 ${esc(sym(origAt(i)))}）の候補</h3>`;
-    h+= opts.length ? `<div class="cands revopts">${opts.map((o,k)=>candButton(o.c,i,`data-rc="${k}"`,`<span class="oname">${esc(o.name)}</span>`)).join("")}</div>`
+      <h3 class="sub">${slotName(i)}（いま ${esc(sym(state.chords[i]))}・原曲 ${esc(sym(origAt(i)))}）の候補</h3>`;
+    h+= opts.length ? `<div class="cands revopts">${opts.map((o,k)=>candItem(o,i,`data-rc="${k}"`)).join("")}</div>`
                     : `<p class="hint">この枠では、この段階の候補はありません。コード名が点線で囲まれた枠を選んでください。</p>`;
     h+=`<div class="gbtns"><span class="hint" style="font-size:12.5px">メロディに合う候補がある枠：${usable.length}（コード名を点線で囲んであります）</span>${usable.length?`<button class="btn small" id="nextUsable">次の枠へ</button>`:""}</div>`;
     if(step===5) h+=`<div class="gbtns"><button class="btn small" id="toRev2" ${i<state.chords.length-1&&state.chords[i+1]?.root?"":"disabled"}>次の枠を着地点にして逆算タブで作る</button></div>`;
@@ -1606,7 +1715,7 @@ function bindRGuide(el){
   if(co) co.onclick=()=>{ if(play&&play.mode==="orig") stop(); else if(step===1){ const ou=origUnits(); playRange(0,ou.length,ou,"orig"); } else playCompare(true); };
   if(cn) cn.onclick=()=>{ if(play&&play.mode==="cmp") stop(); else playCompare(false); };
   const opts=rStepCands(step,i);
-  el.querySelectorAll("[data-rc]").forEach(b=>b.onclick=()=>{ setChord(i, opts[+b.dataset.rc].c, RTECH[step]); previewSel(); });
+  el.querySelectorAll("[data-rc]").forEach(b=>b.onclick=()=>{ applyItem(i, opts[+b.dataset.rc]); previewSel(); });
   const nu=$("#nextUsable"); if(nu) nu.onclick=()=>{ const U=state.chords;
     let k=U.findIndex((u,j)=>j>i && rStepUsable(step,j)); if(k<0) k=U.findIndex((u,j)=>rStepUsable(step,j)); if(k>=0){ state.sel=k; render(); } };
   const tr=$("#toRev2"); if(tr) tr.onclick=()=>{ rev={target:i+1, chain:[]}; state.sel=i+1; state.tab="rev"; store.set(tabKey(),"rev"); render(); };
@@ -1634,7 +1743,7 @@ function renderInsp(){
     el.querySelectorAll("details").forEach(d=>d.addEventListener("toggle",()=>{ d.open?openTech.add(d.dataset.tech):openTech.delete(d.dataset.tech); }));
     const groups=suggest(i);
     el.querySelectorAll(".cand").forEach(b=>b.onclick=()=>{
-      const g=groups[+b.dataset.g]; setChord(i, g.items[+b.dataset.c], g.tech); previewSel(); });
+      applyItem(i, groups[+b.dataset.g].items[+b.dataset.c]); previewSel(); });
     $("#mApply").onclick=()=>{ const c={root:$("#mRoot").value, q:$("#mQual").value}; if($("#mBass").value) c.bass=$("#mBass").value; setChord(i, c, "手入力"); previewSel(); };
     return;
   }
@@ -1748,13 +1857,14 @@ const TONICS = ["C","C#","D♭","D","E♭","E","F","F#","G","A♭","A","B♭","B
 $("#fTonic").innerHTML = TONICS.map(t=>`<option value="${t}">${keyLabel(t)}</option>`).join("");
 const fmtDur = d => +d.toFixed(4);
 function parseTok(tok){
-  let m=tok.match(/^r(?::(\d*\.?\d+))?$/i);
-  if(m){ const dur=m[1]?+m[1]:1; return dur>0?{rest:true,dur,norm:`r:${fmtDur(dur)}`}:null; }
-  m=tok.match(/^([A-Ga-g])([#b♯♭]?)(\d)(?::(\d*\.?\d+))?(~?)$/);
+  const D="(\\d+\\/\\d+|\\d*\\.?\\d+)", ds = x => x && x.includes("/") ? x : fmtDur(durOf(x));   // keep "1/3" as written
+  let m=tok.match(new RegExp(`^r(?::${D})?$`,"i"));
+  if(m){ const dur=durOf(m[1]); return dur>0?{rest:true,dur,norm:`r:${ds(m[1])}`}:null; }
+  m=tok.match(new RegExp(`^([A-Ga-g])([#b♯♭]?)(\\d)(?::${D})?(~?)$`));
   if(!m) return null;
-  const dur=m[4]?+m[4]:1; if(!(dur>0)) return null;
+  const dur=durOf(m[4]); if(!(dur>0)) return null;
   const acc=m[2].replace("♯","#").replace("♭","b");
-  return {dur, norm:`${m[1].toUpperCase()}${acc}${m[3]}:${fmtDur(dur)}${m[5]}`};
+  return {dur, norm:`${m[1].toUpperCase()}${acc}${m[3]}:${ds(m[4])}${m[5]}`};
 }
 const fBeats = s => fmtDur(s);
 function compileForm(){
@@ -1856,12 +1966,16 @@ function applyHarmUi(){
   document.querySelectorAll(".modesw button").forEach(b=>b.setAttribute("aria-pressed", String((b.dataset.mode==="harm")===state.harm)));
   $("#modeDesc").textContent = state.harm ? "旋律に合うコードを一から付けて、メロディ音との関係を確かめる" : "コードを置き換えて、メロディ音がそのコードの何度になるかを確かめる";
 }
-$("#summary").addEventListener("change",e=>{ if(e.target.id==="revealOn"){ state.reveal=e.target.checked; applyHarmUi(); render(); } });
+$("#summary").addEventListener("change",e=>{
+  if(e.target.id==="revealOn"){ state.reveal=e.target.checked; applyHarmUi(); render(); }
+  if(e.target.id==="romanOn"){ state.roman=e.target.checked; store.set("rehamo:roman", state.roman); render(); }
+});
 $("#playOrig").onclick=()=>{ if(play&&play.mode==="orig") stop(); else { const ou=origUnits(); playRange(0,ou.length,ou,"orig"); } };
 const TERM_TEXT = {
   ct:["和声音","コードを形づくる音です（根音 R・3度・5度・7度など）。メロディがこの音だと、コードによく溶け込みます。"],
   tn:["テンション","コードの音には含まれないけれど、重ねると響きを豊かにする音です（9・11・13度など）。ジャズやポップスでは、強拍や長い音にあっても「しゃれた響き」として使えます。"],
   av:["アボイド","コードの音と半音でぶつかって、響きを濁らせやすい音です。たとえば C の上のファ（11度）は、コードのミと半音でぶつかります。弱拍で通り過ぎるだけなら問題ありませんが、強拍や長い音では避けるか、コードを替えます。"],
+  sk:["骨格の音","耳に残りやすい音のことです。枠の最初の音、強拍（小節の1拍目。4拍子では3拍目も）の音、長くのびる音がこれに当たります。コードとの相性は、この音で判定します。それ以外の短い音は、経過音や刺繍音として通り過ぎるなら、ぶつかっても気になりません。音符の下の数字は、骨格の音が濃く、それ以外が薄く表示されます。"],
   nc:["非和声音","コードの音にもテンションにも当たらない音です。経過音（音階を順に通り過ぎる音）や刺繍音（隣の音に行って戻る音）として弱拍で鳴るなら自然ですが、強拍で長く鳴るとぶつかって聞こえます。"],
 };
 document.querySelectorAll(".legend .term").forEach(b=>b.onclick=()=>{
@@ -1883,8 +1997,19 @@ $("#reset").onclick=()=>{ $("#resetMsg").textContent = state.harm?"置いたコ�
 $("#resetNo").onclick=()=>{ $("#resetConfirm").hidden=true; };
 $("#resetYes").onclick=()=>{ $("#resetConfirm").hidden=true; stop();
   rev={target:null,chain:[]}; state.chords=state.harm?emptyUnits():origUnits(); state.sel=Math.min(state.sel,state.chords.length-1); save(); render(); };
+$("#undoBtn").onclick=()=>histGo(-1);
+$("#redoBtn").onclick=()=>histGo(1);
+// Space plays from the selected cell (or stops), unless a control that uses Space itself has the focus
+const spaceFree = () => { const a=document.activeElement; return !a || a===document.body || a.classList.contains("slot"); };
+document.addEventListener("keyup",e=>{ if(e.key===" " && spaceFree() && $("#editor").hidden) e.preventDefault(); });
 document.addEventListener("keydown",e=>{
   if(["SELECT","INPUT","TEXTAREA"].includes(document.activeElement.tagName) || !$("#editor").hidden) return;
+  if((e.ctrlKey||e.metaKey) && !e.altKey && (e.key.toLowerCase()==="z" || e.key.toLowerCase()==="y")){
+    e.preventDefault(); histGo(e.key.toLowerCase()==="y" || e.shiftKey ? 1 : -1); return;
+  }
+  if(e.key===" " && spaceFree()){
+    e.preventDefault(); if(play) stop(); else playRange(state.sel, state.chords.length, state.chords, "here"); return;
+  }
   if(/^[A-Ga-g]$/.test(e.key) && !e.metaKey && !e.ctrlKey && !e.altKey){
     e.preventDefault(); openQuick(e.key.toUpperCase()); return;
   }
