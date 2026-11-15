@@ -8,7 +8,7 @@
 | | 項目 | 主に触るファイル |
 |---|---|---|
 | [x] | A. 選択時の描き直しを速くする | `js/score.js` |
-| [ ] | B. 候補ボタンを簡素にする | `js/guide.js` `js/score.js` `css/style.css` |
+| [x] | B. 候補ボタンを簡素にする | `js/guide.js` `js/score.js` `css/style.css` |
 | [ ] | C. 用語の説明を広げる | `js/app.js` `js/guide.js` `css/style.css` |
 | [ ] | D. 「はじめに」の案内 | `index.html` `js/app.js` `css/style.css` |
 | [ ] | E. 伴奏付けの答え合わせ | `js/guide.js` `js/score.js` |
@@ -65,6 +65,12 @@
 1. 「置き換え候補」タブ、リハモのガイドの各ステップ、伴奏付けのガイドのステップ3・5・6、逆算タブの候補で、ボタンに音名の列が出ず、色つきの度数だけが出る。
 2. 判定の点（○△✕の色の点）は今までどおり出る。
 3. 幅 480px でもボタンの中身がはみ出さない。
+
+**実装メモ**
+- `candButton` の `.chips` を `<span class="degs">` に替え、新しい `degsHtml(rs)`（`js/guide.js`）で度数だけを並べる。同じ音名（`r.name`）は最初の1回。色は `.c-ct` などの文字色（`--ct` `--tn` `--av` `--nc`）、骨格の音は太字、それ以外は `opacity:.6`。`title` の判定と色の点はそのまま。
+- `chipHtml`（`js/score.js`）はほかで使われていなかったので消し、`.chip`／`.chips`／`.role .chip` の CSS も消した（`.k-*` は凡例などで使うので残した）。
+- `.degs` に `min-height:1.3em` を付け、度数の列が空でも高さが揃う。`split`／`cells` の提案は `candButton` を通らないので変わらない。
+- 確かめたこと：`node --test`、`tools/smoke.py`（0 エラー）。Tea for Two の「置き換え候補」タブを幅 1280px／480px で撮り、目で確かめた。両方の幅で、`.cand` の中身があふれていないこと（`scrollWidth`）も確かめた。ガイドの各ステップと逆算タブも同じ `candButton` を通るので変わるが、スクリーンショットは「置き換え候補」タブだけ。
 
 ---
 

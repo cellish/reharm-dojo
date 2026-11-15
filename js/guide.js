@@ -61,7 +61,12 @@ function candButton(cd, i, attrs, extra){
   const rs=rolesFor(cd,i), vv=verdict(rs);
   return `<button class="cand${same(cd,state.chords[i])?" cur":""}" ${attrs} title="${VERDICT_TEXT[vv]}">
     <span class="cn">${esc(sym(cd))}<i class="dot ${vv}"></i></span>${extra||""}
-    <span class="chips">${rs.map(chipHtml).join("")}</span></button>`;
+    <span class="degs">${degsHtml(rs)}</span></button>`;
+}
+// the cell's melody notes as degree labels only, in order of appearance (one per note name)
+function degsHtml(rs){
+  const seen=new Set();
+  return rs.filter(r=>!seen.has(r.name) && seen.add(r.name)).map(r=>`<b class="c-${r.kind}${r.strong?"":" weak"}">${esc(r.label)}</b>`).join("");
 }
 function candItem(it, i, attrs){
   if(it.cells){ const vv=itemVerdict(it,i);

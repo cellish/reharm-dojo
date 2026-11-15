@@ -2,7 +2,6 @@
 // ---------- render ----------
 const $ = s=>document.querySelector(s);
 const esc = s=>String(s).replace(/[&<>"]/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
-const chipHtml = r => `<span class="chip k-${r.kind}${r.strong?"":" weak"}" title="${r.name}: ${KIND_TEXT[r.kind]}"><i>${r.name}</i><b>${esc(r.label)}</b></span>`;
 function slotName(i){
   const u=state.chords[i], bar=Math.floor(u.s/song.bpb)+1, beat=fmtDur(u.s%song.bpb)+1;
   if(u.l===song.bpb) return `第${bar}小節`;
