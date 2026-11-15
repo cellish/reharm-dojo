@@ -52,7 +52,8 @@ function playRange(from,to,chords,mode,startBeat,origin){
   const start = origin ?? b0;
   play={bus,mode,raf:0, from,to,chords, start, end:b1, beat:()=>(ctx.currentTime-t0)/spb+b0};
   const tick=()=>{ if(!play) return; const beat=(ctx.currentTime-t0)/spb+b0;
-    if(beat>=b1 && state.loop){ replayBeats(play, start); return; }   // the next pass starts on the end beat
+    // repeat on the end beat; a short audition of a cell ("slot") always plays once
+    if(beat>=b1 && state.loop && mode!=="slot"){ replayBeats(play, start); return; }
     if(beat>=b1){ play.bus.disconnect && setTimeout(()=>bus.disconnect(),600); play=null; markPlaying(-1); playButtons(); return; }
     markPlaying(beat>=0 && mode!=="orig"? unitAt(beat):-1); play.raf=requestAnimationFrame(tick); };
   play.raf=requestAnimationFrame(tick); playButtons();
