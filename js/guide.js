@@ -193,7 +193,6 @@ function skeletonNotes(i){
     return {...g, why: long&&g.strong?"長い・強拍": long?"長い":"強拍"}; });
 }
 const skelIdx = i => new Set(skeletonNotes(i).flatMap(g=>g.idxs));
-const solfOf = (midi, tonicPc=0) => SOLF[mod(midi-tonicPc)];
 const contains = (c, pcs) => { const set=new Set(pcsOf(c)); return pcs.every(p=>set.has(p)); };
 const isHalfMeter = () => song.bpb===4;
 const rhythmNow = () => state.chords.every(u=>u.l===song.bpb) ? "bar" : "half";
@@ -283,11 +282,11 @@ function guideHtml(){
     <ol class="steps gsteps">${GSTEPS.map((t,k)=>`<li class="${k+1===step?"on":""}${k+1<step?" done":""}"><button data-gs="${k+1}" title="${t}" aria-label="ステップ${k+1}：${t}"${k+1===step?' aria-current="step"':""}></button></li>`).join("")}</ol>
     <h3 class="gtitle"><small>ステップ ${step} / ${GSTEPS.length}</small>${GSTEPS[step-1]}</h3>`;
   if(step===1){
-    const H=HOME(), PH=PRIM(H), HN=PRIM_NAME(H), sf=c=>pcsOf(c).map(p=>SOLF[p]).join("・");
+    const H=HOME(), PH=PRIM(H), HN=PRIM_NAME(H), sf=c=>pcsOf(c).map(p=>solf(p,H)).join("・");
     h+=`<p class="hint">${glossed(`まず骨組みです。フレーズ（4小節ずつ）の最後で、曲が<b>終わる（${HN.I}）</b>のか、<b>まだ続く（${HN.V}）</b>のかを決めます。最後の音が「${sf(PH.I)}」なら ${HN.I}、「${sf(PH.V)}」なら ${HN.V} が合います。曲の最後のフレーズは ${HN.I} で終えます。`)}</p><div class="glist">`;
     phrases().forEach((ph,k,arr)=>{
       const Kp=keyOfCell(ph.end), P=PRIM(Kp), PN=PRIM_NAME(Kp);
-      const u=state.chords[ph.end], sol=ph.last?SOLF[mod(ph.last.midi-Kp.pc)]:"（休符）";
+      const u=state.chords[ph.end], sol=ph.last?solf(ph.last.midi,Kp):"（休符）";
       const pcs=ph.last?[mod(ph.last.midi)]:[], okI=contains(P.I,pcs), okV=contains(P.V,pcs);
       const lastPh=k===arr.length-1;
       h+=`<div class="gitem"><div><b>フレーズ ${k+1}</b>（${ph.from+1}〜${ph.to+1}小節）<br><small>フレーズの最後の音：${sol}${lastPh?"・曲の終わり":""}</small></div>
@@ -307,10 +306,10 @@ function guideHtml(){
   if(step===3){
     const empt=state.chords.map((u,k)=>k).filter(k=>!state.chords[k].root);
     const sk=skeletonNotes(i), pcs=sk.map(n=>mod(n.midi));
-    const skTxt=sk.map(n=>`${solfOf(n.midi,K.pc)}（${n.why}）`).join("・");
+    const skTxt=sk.map(n=>`${solf(n.midi,K)}（${n.why}）`).join("・");
     const fits=["I","IV","V"].filter(k=>contains(P[k],pcs)).map(k=>PN[k]);
     const nx=state.chords[i+1], tip=neighborTip(i);
-    const each = sk.length>1 && !fits.length ? sk.map(n=>`${solfOf(n.midi,K.pc)}を含む：${["I","IV","V"].filter(k=>contains(P[k],[mod(n.midi)])).map(k=>PN[k]).join("・")||"なし"}`).join("／") : "";
+    const each = sk.length>1 && !fits.length ? sk.map(n=>`${solf(n.midi,K)}を含む：${["I","IV","V"].filter(k=>contains(P[k],[mod(n.midi)])).map(k=>PN[k]).join("・")||"なし"}`).join("／") : "";
     h+=`<p class="hint">${glossed(`使うのは ${PN.I}・${PN.IV}・${PN.V}（と ${PN.V7}）だけです。<b>骨格の音</b>（長い音や強拍の音）を含むコードを選びます。`)}</p>
       <p class="hint">終止の手前から決めると楽です。「次に決める枠へ」は、①終止の直前 → ②フレーズの頭 → ③残り の順に進みます。</p>
       <div class="chainrow"><span>${slotName(i)}：骨格の音 <b>${skTxt||"なし"}</b> → ${fits.length?`含むのは <b>${fits.join("・")}</b>`:sk.length>1?`両方を含むコードはありません。<br><small>${each}。どちらを優先するか決めるか、「枠を分割」して2つのコードにします。</small>`:"含むコードはありません（いちばん近いものを）"}${tip?`<br><small class="tip">${tip}</small>`:""}</span></div>

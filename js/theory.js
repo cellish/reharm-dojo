@@ -1,8 +1,12 @@
 // Melody-versus-chord analysis, keys and chord functions, and every chord proposal (techniques).
 // ---------- analysis ----------
 const SOLF={0:"ド",1:"ド♯",2:"レ",3:"ミ♭",4:"ミ",5:"ファ",6:"ファ♯",7:"ソ",8:"ラ♭",9:"ラ",10:"シ♭",11:"シ"};
-function roleOf(chord, midi, tonicPc=0){
-  if(!chord || !chord.root) return {kind:"un", label:SOLF[mod(midi-tonicPc)]};
+// minor keys read from ラ (the relative-major way many Japanese classes teach), when state.laMinor is on
+const SOLF_LA={0:"ラ",1:"シ♭",2:"シ",3:"ド",4:"ド♯",5:"レ",6:"レ♯",7:"ミ",8:"ファ",9:"ファ♯",10:"ソ",11:"ソ♯"};
+// the syllable of a note in key K (from keyAt): the one place that turns a pitch into ド・レ・ミ
+const solf = (midi, K) => (K && K.minor && state.laMinor ? SOLF_LA : SOLF)[mod(midi-(K ? K.pc : 0))];
+function roleOf(chord, midi, K){
+  if(!chord || !chord.root) return {kind:"un", label:solf(midi, K)};
   const iv = mod(midi - rootPc(chord.root)); const q=Q[chord.q];
   if(iv in q.ct) return {kind:"ct", label:q.ct[iv]};
   if(iv in q.tn) return {kind:"tn", label:q.tn[iv]};
@@ -36,7 +40,7 @@ function isPassing(n){
   const d1=n.midi-a.midi, d2=b.midi-n.midi;
   return d1!==0 && d2!==0 && Math.abs(d1)<=2 && Math.abs(d2)<=2 && Math.sign(d1)===Math.sign(d2);
 }
-function rolesSpan(chord,s,l){ const off=keyAt(s).pc; return notesSpan(s,l).map(n=>{ const r={...n, ...roleOf(chord,n.midi,off), name:dnoteName(n.midi)};
+function rolesSpan(chord,s,l){ const K=keyAt(s); return notesSpan(s,l).map(n=>{ const r={...n, ...roleOf(chord,n.midi,K), name:dnoteName(n.midi)};
   if((r.kind==="av"||r.kind==="nc") && isPassing(n)) r.passing=true; return r; }); }
 const rolesFor = (chord,i) => rolesSpan(chord, state.chords[i].s, state.chords[i].l);
 function verdict(roles){

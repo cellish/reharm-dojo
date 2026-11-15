@@ -51,7 +51,7 @@ function vfSystem(b0,bars,first,last,bps,units){
   const cs=getComputedStyle(document.documentElement), cv=v=>cs.getPropertyValue(v).trim();
   const col={ct:cv("--ct"),tn:cv("--tn"),av:cv("--av"),nc:cv("--nc"),pk:cv("--ink-2"),un:cv("--ink")};
   // the colours are in the key too: they are baked into the note heads and follow the light/dark theme
-  const key=JSON.stringify([state.songId, xp.name, bps, b0, HB, T, DEG_Y, Object.values(col),
+  const key=JSON.stringify([state.songId, xp.name, bps, b0, HB, T, DEG_Y, Object.values(col), state.laMinor,
     units.map(i=>{ const u=state.chords[i]; return [u.s, u.l, u.root, u.q, u.bass||null]; })]);
   let E = VF_CACHE && vfCache.get(key);
   if(E){ vfCache.delete(key); vfCache.set(key, E); }   // keep recently used systems at the end
@@ -112,7 +112,7 @@ function vfEngrave(b0,bars,first,last,bps,units,col){
     const tk=[], heads=[], tups=[]; let trip=[], tripDur=0;
     evs.forEach(e=>{
       let kind="pk", strong=false, label="";
-      if(!e.rest && e.start>=0){ const ui=unitAt(e.start), u=state.chords[ui], r=roleOf(u,e.n.midi,keyAt(e.start).pc);
+      if(!e.rest && e.start>=0){ const ui=unitAt(e.start), u=state.chords[ui], r=roleOf(u,e.n.midi,keyAt(e.start));
         kind=r.kind; label=r.label; strong = u.root ? isStrong(e.n,u.s,u.l) : skelIdx(ui).has(e.n.idx); }
       const parts=splitDur(Math.min(e.dur, sg.t1-e.start)); let prev=null;
       parts.forEach(([d,code,isT],pi)=>{
@@ -208,6 +208,7 @@ function render(){
     <span class="pill good">○ ${cnt.good}</span><span class="pill ok">△ ${cnt.ok}</span><span class="pill bad">✕ ${cnt.bad}</span>
     <label class="chk"><input type="checkbox" id="revealOn" ${state.reveal?"checked":""}>原曲のコードを見る</label>
     <label class="chk"><input type="checkbox" id="romanOn" ${state.roman?"checked":""}>度数を表示</label>
+    ${isMinor() || keyOfCell(state.sel).minor ? `<label class="chk"><input type="checkbox" id="laOn" ${state.laMinor?"checked":""}>短調はラから読む</label>` : ""}
     ${state.reveal?`<span>原曲と同じ：<b>${match}</b> 枠、同じ機能：<b>${fnMatch}</b> 枠（違っていても、合っていれば正解です）</span>`:""}` :
     `<span>置き換え <b>${changed}</b> / ${n} か所</span>
     <span class="pill good">○ ${cnt.good}</span><span class="pill ok">△ ${cnt.ok}</span><span class="pill bad">✕ ${cnt.bad}</span>
