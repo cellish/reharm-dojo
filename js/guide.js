@@ -323,7 +323,7 @@ function guideHtml(){
     const iss=flowIssues();
     const strip=barStrip(state.chords, (u,k)=>{ const A=analyze(u,keyAt(u.s));
       return `<button class="fn f-${A.fn||"x"}${k===i?" cur":""}" data-go="${k}" title="${slotName(k)}${A.note?"："+A.note:""}"><b>${esc(sym(u))}</b><small>${fnMark(A)}</small></button>`; });
-    h+=`<p class="hint">${glossed(`T（トニック）→ S（サブドミナント）→ D（ドミナント）→ T の流れになっているかを見ます。押すとその枠を選びます。`)}</p>
+    h+=`<p class="hint">${glossed(`コードの機能が、T（トニック）→ S（サブドミナント）→ D（ドミナント）→ T の流れになっているかを見ます。押すとその枠を選びます。`)}</p>
       <div class="fstrip">${strip}</div>
       ${iss.length?`<ul class="issues">${iss.map(x=>`<li class="${x.kind}"><button data-go="${x.i}">${esc(x.text)}</button></li>`).join("")}</ul>`:`<p class="hint good">気になる点はありません。「原曲のコードを見る」で答え合わせもできます。</p>`}`;
   }
@@ -380,7 +380,7 @@ const RFLOW = ["read", ...TECH_ORDER, "review"];
 const RSTEPS = RFLOW.map(id=>id==="read"?"原曲を読む":id==="review"?"見直す":TECH[id].name);
 const rflow = () => RFLOW[getGStep()-1];   // the open step of the reharm guide
 const RDESC = {
-  read:"まず原曲の骨組みを知ります。T（安定）・S（広がり）・D（緊張）の流れと、フレーズの終わり（着地点の候補）を確かめましょう。原曲を一度聴いてから次へ進みます。",
+  read:"まず原曲の骨組みを知ります。コードの機能（T＝安定、S＝広がり、D＝緊張）の流れと、フレーズの終わり（着地点の候補）を確かめましょう。原曲を一度聴いてから次へ進みます。",
   seventh:"コードに7度や6度を足して、響きを厚くします。いちばん安全なリハモです。さらに9度などのテンションを足すこともできます。メロディ音がテンション（青）になる所は、しゃれた響きになります。",
   func:"同じ働きをもつ別のコードに替えます。I ↔ VIm・IIIm、IV ↔ IIm のように、メロディがよく乗るものを選びます。V のあとの I を VIm にすると、終わったと思わせて続ける「偽終止」になります。",
   bass:"コードはそのままに、ベースの音だけを変えます。分数コード C/E は「C のコードで、ベースは E」という意味です。転回形でベースをなめらかにつなぐ、ベースを1音ずつ下げる（上げる）、同じベースを保つ（ペダル）、V の代わりに IV/V の形を使う、が代表です。楽譜の下にベースラインが出ます。",
