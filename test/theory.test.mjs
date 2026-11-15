@@ -100,3 +100,14 @@ test("a cliché that leads to IV arrives on the seventh chord", () => {
   load("jingle");
   assert.deepEqual(proposals(0, "cliche")[0].split(">").slice(-2), ["Cmaj7", "C7"]);
 });
+
+test("solf reads syllables from the tonic, or from ラ in minor when chosen", () => {
+  load("twinkle");
+  const s = (midi, minor, la) => run(`state.laMinor=${la}; solf(${midi}, {tonic:"C", pc:0, minor:${minor}})`);
+  assert.deepEqual([60, 64, 67, 71].map(m => s(m, false, true)), ["ド", "ミ", "ソ", "シ"]);   // major: never from ラ
+  assert.deepEqual([60, 63, 67, 71].map(m => s(m, true, false)), ["ド", "ミ♭", "ソ", "シ"]);  // minor, read from ド
+  assert.deepEqual([60, 63, 67, 65].map(m => s(m, true, true)), ["ラ", "ド", "ミ", "レ"]);    // minor, read from ラ
+  assert.equal(s(71, true, true), "ソ♯");   // the leading tone of C minor (B) is ソ♯
+  assert.equal(run(`state.laMinor=true; solf(62, {tonic:"D", pc:2, minor:true})`), "ラ");   // from the key's own tonic
+  run("state.laMinor=false; null");
+});

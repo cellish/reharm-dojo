@@ -145,6 +145,7 @@ $("#helpBtn").onclick=()=>showIntro($("#intro").hidden);
 $("#introClose").onclick=()=>{ showIntro(false); $("#helpBtn").focus(); };
 $("#summary").addEventListener("change",e=>{
   if(e.target.id==="revealOn"){ state.reveal=e.target.checked; applyHarmUi(); render(); }
+  if(e.target.id==="laOn"){ state.laMinor=e.target.checked; store.set("rehamo:la", state.laMinor); render(); }
   if(e.target.id==="romanOn"){ state.roman=e.target.checked; store.set("rehamo:roman", state.roman); render(); }
 });
 $("#playOrig").onclick=()=>{ if(play&&play.mode==="orig") stop(); else { const ou=origUnits(); playRange(0,ou.length,ou,"orig"); } };
