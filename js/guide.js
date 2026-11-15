@@ -72,7 +72,7 @@ function selbarHtml(i){
       ${state.harm?`<button class="btn" id="revert" ${c.root?"":"disabled"}>コードを消す</button>`:`<button class="btn" id="revert" ${isChanged(i)?"":"disabled"}>原曲に戻す</button>`}
     </span>
   </div>
-  <div class="rolerow"><span class="pill ${v}">${VERDICT_TEXT[v]}</span><span class="vmsg">${verdictMsg(roles,v)}${answerNote(i)?" "+esc(answerNote(i)):""}</span>
+  <div class="rolerow"><span class="pill ${v}">${VERDICT_TEXT[v]}</span><span class="vmsg">${verdictMsg(roles,v)}</span>${answerNote(i)?`<span class="ansnote">${esc(answerNote(i))}</span>`:""}
     ${state.harm&&!state.reveal?"":`<span class="cmpset" title="選んだ枠のまわり4小節を聴き比べます">聴き比べ <button class="btn small" id="selCmpO">▶ 原曲</button><button class="btn small" id="selCmpN">▶ いま</button></span>`}</div>`;
 }
 function candButton(cd, i, attrs, extra){
