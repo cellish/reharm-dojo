@@ -39,6 +39,39 @@ with sync_playwright() as p:
                 n += ev("""(()=>{ let k=0; const cells=[0,1,Math.floor(state.chords.length/2),state.chords.length-2].filter(i=>i>=0&&i<state.chords.length);
                   for(const i of cells){ const m=techniques(i).length; for(let j=0;j<m;j++){ const before=JSON.stringify(state.chords), it=techniques(i)[j]; if(!it) continue;
                     applyItem(i,it); k++; histGo(-1); if(JSON.stringify(state.chords)!==before) throw new Error("undo mismatch at cell "+i+", proposal "+j); } } stop(); return k; })()""")
+    # the per-system engraving cache (VF_CACHE) must give the same sheet as engraving afresh
+    ev('state.harm=false; applyHarmUi(); restoreTab(); loadSong("tea")')
+    # VexFlow numbers its elements (vf-auto123) afresh on each engraving, so those ids are left out
+    same = "(()=>{ const h=()=>$('#sheet').innerHTML.replace(/vf-auto\\d+/g,''); render(); const a=h(); VF_CACHE=false; render(); const b=h(); VF_CACHE=true; return a===b; })()"
+    checks = [
+        ("replace", "state.sel=5; setChord(5, techniques(5)[0].c || {root:'E',q:'7'}, 'test')"),
+        ("split", "splitUnit(2); render()"),
+        ("merge", "mergeNext(2); render()"),
+        ("undo", "histGo(-1)"),
+        ("transpose", "setKey('E♭'); setGeom(); render()"),
+        ("undo all", "histGo(-1); histGo(-1)"),
+        # Twinkle has no slash chord: the first one turns the bass row on (taller systems), Undo turns it off
+        ("bass row on", "loadSong('twinkle'); render(); setChord(1, {root:'C', q:'', bass:'E'}, 'test')"),
+        ("bass row off", "histGo(-1)"),
+        ("back to Tea", "loadSong('tea')"),
+    ]
+    for name, js in checks:
+        ev(js)
+        if not ev(same):
+            errs.append(f"cached sheet differs after {name}")
+    # only the system holding the edited cell is engraved anew
+    ev("render()"); vfw = "[...document.querySelectorAll('#sheet .vfw')].map(g=>g.innerHTML)"; before = ev(vfw)
+    ev("setChord(state.chords.length-1, {root:'A', q:'m7'}, 'test')")
+    after = ev(vfw)
+    if [a == b for a, b in zip(before, after)] != [True] * (len(before) - 1) + [False]:
+        errs.append("editing the last cell changed other systems")
+    pg.set_viewport_size({"width": 480, "height": 900}); pg.wait_for_timeout(200)
+    if ev("barsPerSystem()") != 2 or not ev(same):
+        errs.append("cached sheet differs after narrowing to 2 bars per system")
+    pg.set_viewport_size({"width": 1280, "height": 900}); pg.wait_for_timeout(200)
+    if not ev(same):
+        errs.append("cached sheet differs after widening back to 4 bars per system")
+    ev('$("#resetYes").click()')
     # how long a selection change takes on the longest song (see docs/PLAN.md, item D)
     ev('state.harm=false; applyHarmUi(); loadSong("tea")')
     ms = ev("(()=>{ const t=performance.now(); for(let k=0;k<10;k++){ state.sel=k; render(); } return (performance.now()-t)/10; })()")

@@ -43,7 +43,44 @@ function vfModW(first){
   return s.getNoteStartX();
 }
 function vfKey(midi){ const s=dnote(midi); return LETTERS[s.li].toLowerCase()+(s.alter>0?"#".repeat(s.alter):"b".repeat(-s.alter))+"/"+s.oct; }
+// Engraving a system is the slow part of render(), so its result is cached per system. The key holds
+// everything that changes the engraving; the selection, the 逆算 marks and the play position are not in
+// it, because svg() reads them from state each time it builds the markup.
+let VF_CACHE = true;   // false: engrave every time (tools/smoke.py compares both)
+const vfCache = new Map(), VF_CACHE_MAX = 64;
 function vfSystem(b0,bars,first,last,bps,units){
+  const cs=getComputedStyle(document.documentElement), cv=v=>cs.getPropertyValue(v).trim();
+  const col={ct:cv("--ct"),tn:cv("--tn"),av:cv("--av"),nc:cv("--nc"),pk:cv("--ink-2"),un:cv("--ink")};
+  // the colours are in the key too: they are baked into the note heads and follow the light/dark theme
+  const key=JSON.stringify([state.songId, xp.name, bps, b0, HB, T, DEG_Y, Object.values(col),
+    units.map(i=>{ const u=state.chords[i]; return [u.s, u.l, u.root, u.q, u.bass||null]; })]);
+  let E = VF_CACHE && vfCache.get(key);
+  if(E){ vfCache.delete(key); vfCache.set(key, E); }   // keep recently used systems at the end
+  else {
+    E = vfEngrave(b0,bars,first,last,bps,units,col);
+    if(VF_CACHE){ vfCache.set(key, E); if(vfCache.size>VF_CACHE_MAX) vfCache.delete(vfCache.keys().next().value); }
+  }
+  const {clefW, W, barW, M, info, inner}=E, {x, edge}=M;
+  const svg = () => {
+    let g=""; const cells=[];
+    units.forEach(i=>{ const u=state.chords[i], x1=edge(u.s), x2=edge(u.s+u.l); cells.push([+x1.toFixed(1),+x2.toFixed(1),i]);
+      g+=`<rect class="hl${i===state.sel?" sel":""}" data-i="${i}" x="${x1}" y="0" width="${x2-x1}" height="${HB}"/>`; });
+    g+=`<g class="vfw">${inner}</g>`;
+    info.forEach(s=>s.heads.forEach(h=>{ if(h.e.rest || h.kind==="pk") return;
+      g+=`<text class="deg f-${h.kind}${h.strong?"":" weak"}" x="${h.x}" y="${DEG_Y}" text-anchor="middle">${esc(h.label)}</text>`; }));
+    if(HB>H){
+      g+=`<text class="blab" x="4" y="${BASS_Y}">ベース</text>`;
+      units.forEach(k=>{ const u=state.chords[k]; if(!u.root) return; const pv=state.chords[k-1];
+        const d = pv&&pv.root ? mod(bassPc(u)-bassPc(pv)) : -1;
+        const cls = d===0?"pedal": [1,2,10,11].includes(d)?"step":"";
+        g+=`<text class="bnote ${cls}${u.bass?" sl":""}" x="${x(u.s)}" y="${BASS_Y}" text-anchor="middle">${esc(droot(u.bass||u.root))}</text>`; });
+    }
+    return `<svg viewBox="0 0 ${W} ${HB}" data-cells='${JSON.stringify(cells)}' data-w="${W}" role="img" aria-label="${b0+1}小節目からの旋律">${g}</svg>`;
+  };
+  return {clefW, W, M, svg, barW};
+}
+// The engraving of one system: VexFlow's SVG as a string, plus where each note and cell edge landed.
+function vfEngrave(b0,bars,first,last,bps,units,col){
   const V=VF(), bpb=song.bpb, sys0=b0*bpb, key=SIGKEY[xp.sig];
   // Pickup: the space left of its notes matches the space after its last note (which grows with that note's
   // length), so a lone quarter-note pickup sits in the middle instead of hugging the time signature.
@@ -56,8 +93,6 @@ function vfSystem(b0,bars,first,last,bps,units){
   if(!vfHost){ vfHost=document.createElement("div"); vfHost.setAttribute("aria-hidden","true");
     vfHost.style.cssText="position:absolute;left:-10000px;top:0;visibility:hidden"; document.body.appendChild(vfHost); }
   vfHost.innerHTML="";
-  const cs=getComputedStyle(document.documentElement), cv=v=>cs.getPropertyValue(v).trim();
-  const col={ct:cv("--ct"),tn:cv("--tn"),av:cv("--av"),nc:cv("--nc"),pk:cv("--ink-2"),un:cv("--ink")};
   const R=new V.Renderer(vfHost, V.Renderer.Backends.SVG); R.resize(W,HB); const ctx=R.getContext();
   const segs=[];
   if(pkW) segs.push({t0:-song.pk, t1:0, x:0, w:clefW, mods:true, bx:0});
@@ -126,25 +161,9 @@ function vfSystem(b0,bars,first,last,bps,units){
     const l=info[info.length-1]; if(Math.abs(t-l.sg.t1)<1e-6) return l.sg.x+l.sg.w;
     const h=seg(t).heads.find(hh=>Math.abs(hh.e.start-t)<1e-6);
     return h ? h.left-6 : x(t)-10; };
+  // copied out as a string: vfHost is reused by the next system, and nothing below reads it again
   const inner=vfHost.querySelector("svg").innerHTML;
-  const M={x,edge};
-  const svg = () => {
-    let g=""; const cells=[];
-    units.forEach(i=>{ const u=state.chords[i], x1=edge(u.s), x2=edge(u.s+u.l); cells.push([+x1.toFixed(1),+x2.toFixed(1),i]);
-      g+=`<rect class="hl${i===state.sel?" sel":""}" data-i="${i}" x="${x1}" y="0" width="${x2-x1}" height="${HB}"/>`; });
-    g+=`<g class="vfw">${inner}</g>`;
-    info.forEach(s=>s.heads.forEach(h=>{ if(h.e.rest || h.kind==="pk") return;
-      g+=`<text class="deg f-${h.kind}${h.strong?"":" weak"}" x="${h.x}" y="${DEG_Y}" text-anchor="middle">${esc(h.label)}</text>`; }));
-    if(HB>H){
-      g+=`<text class="blab" x="4" y="${BASS_Y}">ベース</text>`;
-      units.forEach(k=>{ const u=state.chords[k]; if(!u.root) return; const pv=state.chords[k-1];
-        const d = pv&&pv.root ? mod(bassPc(u)-bassPc(pv)) : -1;
-        const cls = d===0?"pedal": [1,2,10,11].includes(d)?"step":"";
-        g+=`<text class="bnote ${cls}${u.bass?" sl":""}" x="${x(u.s)}" y="${BASS_Y}" text-anchor="middle">${esc(droot(u.bass||u.root))}</text>`; });
-    }
-    return `<svg viewBox="0 0 ${W} ${HB}" data-cells='${JSON.stringify(cells)}' data-w="${W}" role="img" aria-label="${b0+1}小節目からの旋律">${g}</svg>`;
-  };
-  return {clefW, W, M, svg, barW};
+  return {clefW, W, barW, M:{x,edge}, info, inner};
 }
 const ctxTies=[];
 function vfWaitFonts(){
