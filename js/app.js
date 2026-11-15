@@ -209,11 +209,18 @@ function restoreTerm(){
 }
 // A tempo change while playing restarts playback from the current beat at the new tempo
 // (debounced, so dragging the slider does not re-attack the chords on every step).
+// The mix slider uses the same restart, since the notes already scheduled carry their volume.
 let bpmTimer=0;
-$("#bpm").oninput=e=>{ state.bpm=+e.target.value; $("#bpmOut").textContent=state.bpm;
+function replayLater(){
   if(!play) return; clearTimeout(bpmTimer);
   bpmTimer=setTimeout(()=>{ if(!play) return; const p=play, at=p.beat();
-    playRange(p.from, p.to, p.chords, p.mode, Math.max(at, p.chords[p.from].s-(p.from===0?song.pk:0))); }, 90); };
+    playRange(p.from, p.to, p.chords, p.mode, Math.max(at, p.chords[p.from].s-(p.from===0?song.pk:0)), p.start); }, 90);
+}
+$("#bpm").oninput=e=>{ state.bpm=+e.target.value; $("#bpmOut").textContent=state.bpm; replayLater(); };
+$("#mix").value=state.mix;
+$("#mix").oninput=e=>{ state.mix=+e.target.value; store.set("rehamo:mix", state.mix); replayLater(); };
+$("#loopOn").checked=state.loop;
+$("#loopOn").onchange=e=>{ state.loop=e.target.checked; store.set("rehamo:loop", state.loop); };
 $("#melOn").onchange=e=>{ state.melOn=e.target.checked; };
 // the current progression as plain text, four bars to a line (with a line of degrees when they are shown)
 function progText(){

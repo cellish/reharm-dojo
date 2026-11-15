@@ -7,6 +7,10 @@ function ensureCtx(){
     master.connect(comp); comp.connect(ctx.destination); }
   if(ctx.state==="suspended") ctx.resume();
 }
+// Melody/chord balance from the mix slider (0 = melody only … 50 = both as before … 100 = chords only).
+// Squared so the fade sounds even to the ear rather than dropping off only at the end.
+const melGain = () => Math.min(1,(100-state.mix)/50)**2;
+const chordGain = () => Math.min(1,state.mix/50)**2;
 function tone(bus,midi,t,d,kind){
   const f=440*Math.pow(2,(midi-69)/12), o=ctx.createOscillator(), g=ctx.createGain(), lp=ctx.createBiquadFilter();
   lp.type="lowpass"; o.frequency.value=f;
@@ -14,6 +18,7 @@ function tone(bus,midi,t,d,kind){
   if(kind==="mel"){ o.type="triangle"; lp.frequency.value=3400; peak=.2; sus=.7; tau=.25; }
   else if(kind==="bass"){ o.type="triangle"; lp.frequency.value=700; peak=.26; sus=.45; tau=.5; }
   else { o.type="triangle"; lp.frequency.value=1500; peak=.065; sus=.35; tau=.7; }
+  peak *= kind==="mel" ? melGain() : chordGain();   // the bass belongs to the chords
   g.gain.setValueAtTime(0,t); g.gain.linearRampToValueAtTime(peak,t+.012);
   g.gain.setTargetAtTime(peak*sus,t+.012,tau);
   g.gain.setTargetAtTime(0,t+Math.max(.05,d-.04),.05);
@@ -30,7 +35,9 @@ function stop(){
   const g=play.bus, t=ctx.currentTime; g.gain.cancelScheduledValues(t); g.gain.setValueAtTime(g.gain.value,t); g.gain.linearRampToValueAtTime(0,t+.05);
   setTimeout(()=>g.disconnect(),150); play=null; markPlaying(-1); playButtons();
 }
-function playRange(from,to,chords,mode,startBeat){
+// startBeat: where this pass begins (a restart after a tempo or mix change begins mid-way);
+// origin: where the range began when it was first played, for the next pass when repeating.
+function playRange(from,to,chords,mode,startBeat,origin){
   stop(); ensureCtx();
   const bus=ctx.createGain(); bus.connect(master);
   const spb=60/state.bpm, b0=startBeat ?? chords[from].s-(from===0?song.pk:0), b1=chords[to-1].s+chords[to-1].l, t0=ctx.currentTime+.06;
@@ -42,8 +49,10 @@ function playRange(from,to,chords,mode,startBeat){
     let dur=n.dur, k=n.idx; while(song.notes[k].tie && song.notes[k+1]){ k++; dur+=song.notes[k].dur; }
     if(n.start<b1 && n.start+dur>b0){
       const s=Math.max(n.start,b0), e=Math.min(n.start+dur,b1); tone(bus,n.midi+xp.semis,t0+(s-b0)*spb,(e-s)*spb,"mel"); }});
-  play={bus,mode,raf:0, from,to,chords, beat:()=>(ctx.currentTime-t0)/spb+b0};
+  const start = origin ?? b0;
+  play={bus,mode,raf:0, from,to,chords, start, beat:()=>(ctx.currentTime-t0)/spb+b0};
   const tick=()=>{ if(!play) return; const beat=(ctx.currentTime-t0)/spb+b0;
+    if(beat>=b1 && state.loop){ playRange(from,to,chords,mode,start,start); return; }   // the next pass starts on the end beat
     if(beat>=b1){ play.bus.disconnect && setTimeout(()=>bus.disconnect(),600); play=null; markPlaying(-1); playButtons(); return; }
     markPlaying(beat>=0 && mode!=="orig"? unitAt(beat):-1); play.raf=requestAnimationFrame(tick); };
   play.raf=requestAnimationFrame(tick); playButtons();
