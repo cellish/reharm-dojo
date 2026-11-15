@@ -131,5 +131,8 @@ function buildSong(id){
   const lo=Math.min(...notes.map(n=>n.midi)), hi=Math.max(...notes.map(n=>n.midi));
   // modulated stretches: keys:[[firstBar, lastBar, tonic as written, "major"|"minor"]]
   const regions=(s.keys||[]).map(([a,b,t,m])=>({b0:(a-1)*s.bpb, b1:b*s.bpb, tonic:convName(t), minor:m==="minor"}));
-  return {...s, id, notes, rests, pk, orig:cells, nbars:s.bars.length, lo, hi, spellC, regions};
+  // phrase lengths in bars: used only when they are whole numbers adding up to the song; otherwise 4 bars each
+  const ph=s.phrases, phrases = Array.isArray(ph) && ph.length && ph.every(n=>Number.isInteger(n) && n>0)
+    && ph.reduce((a,n)=>a+n,0)===s.bars.length ? ph.slice() : null;
+  return {...s, id, notes, rests, pk, orig:cells, nbars:s.bars.length, lo, hi, spellC, regions, phrases};
 }
