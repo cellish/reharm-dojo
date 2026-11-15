@@ -63,7 +63,7 @@ function selbarHtml(i){
   return `<div class="selrow">
     <span class="ilabel">${slotName(i)}</span>
     <span class="selchord">${esc(sym(c))}</span>
-    <div class="imeta">${state.harm&&!state.reveal?"":`<span>原曲 <b>${esc(sym(o))}</b></span>`}<span>${termBtn("fn","機能")} ${fnText(A)}</span>${A.roman?`<span>${termBtn("deg","度数")} <b>${esc(A.roman)}</b>${A.alt?`（${esc(A.alt)}）`:""}</span>`:""}${away?`<span>ここは <b>${esc(droot(K.tonic))}${K.minor?"m":""}</b> に転調中</span>`:""}<span>次 <b>${next?esc(sym(next)):"（終わり）"}</b></span></div>
+    <div class="imeta">${state.harm&&!state.reveal?"":`<span class="m-orig">原曲 <b>${esc(sym(o))}</b></span>`}<span class="m-fn">${termBtn("fn","機能")} ${fnText(A)}</span>${A.roman?`<span class="m-deg">${termBtn("deg","度数")} <b>${esc(A.roman)}</b>${A.alt?`（${esc(A.alt)}）`:""}</span>`:""}${away?`<span class="m-key">ここは <b>${esc(droot(K.tonic))}${K.minor?"m":""}</b> に転調中</span>`:""}<span class="m-next">次 <b>${next?esc(sym(next)):"（終わり）"}</b></span></div>
     <span class="selbtns">
       <button class="btn" id="hearPrev">${play&&play.mode==="prevbar"?"■ 停止":"▶ 前小節から"}</button>
       <button class="btn primary" id="hearHere">${play&&play.mode==="here"?"■ 停止":"▶ ここから"}</button>
@@ -464,8 +464,12 @@ let lastAns="";
 function showAnsNote(){
   const a=$("#selbar .ansnote"), txt=a ? a.textContent : "";
   if(txt===lastAns) return; lastAns=txt;
-  if(!a || !matchMedia("(max-width:720px)").matches) return;
-  const over=a.getBoundingClientRect().bottom+8-$("#insp").getBoundingClientRect().top;
+  if(a) revealAboveSheet(a);
+}
+// phones only: scroll just enough that el is not covered by the panel fixed to the bottom of the screen
+function revealAboveSheet(el){
+  if(!matchMedia("(max-width:720px)").matches) return;
+  const over=el.getBoundingClientRect().bottom+8-$("#insp").getBoundingClientRect().top;
   if(over>0) window.scrollBy({top:over, behavior:"smooth"});
 }
 function renderInspBody(){

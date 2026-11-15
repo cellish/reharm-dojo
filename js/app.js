@@ -209,6 +209,7 @@ document.addEventListener("click", e=>{
   const was=b.getAttribute("aria-expanded")==="true"; closeTerms(); openTerm=null;
   if(was) return;
   showTerm(b);
+  if(b.closest("#selbar")) revealAboveSheet(b.closest("#selbar"));   // the 機能・度数 box opens under the bar
   if(!b.closest(".legend")) openTerm={id:b.dataset.term, k:panelTerms().filter(x=>x.dataset.term===b.dataset.term).indexOf(b), sel:state.sel};
 });
 function restoreTerm(){
