@@ -48,7 +48,9 @@ function answerNote(i){
   let t;
   if(same(c,o)) t="原曲と同じコードです。";
   else if(v==="bad") t=`骨格の音がぶつかっています。原曲は ${os} です。`;
-  else if(rootPc(c.root)===rootPc(o.root)) t=`原曲（${os}）と根音が同じで、響きの厚さが違うだけです。`;
+  else if(rootPc(c.root)===rootPc(o.root))   // same root: only the same diatonic function is "just thicker"
+    t = A.kind==="dia" && O.kind==="dia" && A.fn===O.fn ? `原曲（${os}）と根音が同じで、響きの厚さが違うだけです。`
+      : `原曲（${os}）と根音は同じですが、働きが違います（${A.note||"調の外のコード"}）。`;
   else if(A.fn && A.fn===O.fn) t=`原曲（${os}）と同じ機能（${A.fn}）です。別の答えとして成り立ちます。`;
   else if(A.fn && O.fn) t=`原曲（${os}）とは機能が違います（あなた：${A.fn}、原曲：${O.fn}）。メロディには合っているので、流れを聴き比べてみましょう。`;
   else t=`原曲は ${os} です。メロディには合っています。聴き比べてみましょう。`;
