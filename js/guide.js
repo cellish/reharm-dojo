@@ -38,6 +38,22 @@ function verdictMsg(roles,v){
   if(v==="ok") return `短い音 ${names(roles.filter(r=>clash(r)&&!r.strong&&!r.passing))} は、通り過ぎる音として聞こえれば問題ありません。`;
   return "メロディはこのコードによく収まっています。";
 }
+// 伴奏付け, with the original shown: one line on how the chord placed in cell i compares with the original.
+// A different chord is often a fine answer, so the comparison is by function in the key of that place.
+function answerNote(i){
+  const c=state.chords[i];
+  if(!state.harm || !state.reveal || !c || !c.root) return "";
+  const o=origAt(i), K=keyOfCell(i), A=analyze(c,K), O=analyze(o,K), v=verdict(rolesFor(c,i)), os=sym(o);
+  const head = sameCell(c,o) ? "" : "原曲とはコードを変える位置が違います。";
+  let t;
+  if(same(c,o)) t="原曲と同じコードです。";
+  else if(v==="bad") t=`骨格の音がぶつかっています。原曲は ${os} です。`;
+  else if(rootPc(c.root)===rootPc(o.root)) t=`原曲（${os}）と根音が同じで、響きの厚さが違うだけです。`;
+  else if(A.fn && A.fn===O.fn) t=`原曲（${os}）と同じ機能（${A.fn}）です。別の答えとして成り立ちます。`;
+  else if(A.fn && O.fn) t=`原曲（${os}）とは機能が違います（あなた：${A.fn}、原曲：${O.fn}）。メロディには合っているので、流れを聴き比べてみましょう。`;
+  else t=`原曲は ${os} です。メロディには合っています。聴き比べてみましょう。`;
+  return head+t;
+}
 function selbarHtml(i){
   const c=state.chords[i], o=origAt(i), next=state.chords[i+1];
   const roles=rolesFor(c,i), v=verdict(roles);
@@ -54,7 +70,7 @@ function selbarHtml(i){
       ${state.harm?`<button class="btn" id="revert" ${c.root?"":"disabled"}>コードを消す</button>`:`<button class="btn" id="revert" ${isChanged(i)?"":"disabled"}>原曲に戻す</button>`}
     </span>
   </div>
-  <div class="rolerow"><span class="pill ${v}">${VERDICT_TEXT[v]}</span><span class="vmsg">${verdictMsg(roles,v)}</span>
+  <div class="rolerow"><span class="pill ${v}">${VERDICT_TEXT[v]}</span><span class="vmsg">${verdictMsg(roles,v)}${answerNote(i)?" "+esc(answerNote(i)):""}</span>
     ${state.harm&&!state.reveal?"":`<span class="cmpset" title="選んだ枠のまわり4小節を聴き比べます">聴き比べ <button class="btn small" id="selCmpO">▶ 原曲</button><button class="btn small" id="selCmpN">▶ いま</button></span>`}</div>`;
 }
 function candButton(cd, i, attrs, extra){
