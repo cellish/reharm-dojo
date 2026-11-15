@@ -10,7 +10,7 @@
 | [x] | A. 選択時の描き直しを速くする | `js/score.js` |
 | [x] | B. 候補ボタンを簡素にする | `js/guide.js` `js/score.js` `css/style.css` |
 | [x] | C. 用語の説明を広げる | `js/app.js` `js/guide.js` `css/style.css` |
-| [ ] | D. 「はじめに」の案内 | `index.html` `js/app.js` `css/style.css` |
+| [x] | D. 「はじめに」の案内 | `index.html` `js/app.js` `css/style.css` |
 | [ ] | E. 伴奏付けの答え合わせ | `js/guide.js` `js/score.js` |
 | [ ] | F. 再生のくり返しと音量バランス | `index.html` `js/audio.js` `js/app.js` |
 | [ ] | G. 短調の階名をラから読む切り替え | `js/theory.js` `js/guide.js` `js/score.js` |
@@ -149,6 +149,11 @@
 1. 保存が空の状態で開くと箱が出る。閉じて読み込み直すと出ない。`使い方` で出し入れできる。
 2. 幅 480px で、箱がはみ出さず、ツールバーと重ならない。
 3. 箱が出ていても、楽譜の段の折り返し（4小節／2小節）に影響しない。
+
+**実装メモ**
+- `index.html`：ヘッダーのモード切り替えと `使い方`（`#helpBtn`）を `.topbtns` でまとめ、ボタンを左に置いた。ツールバーの後ろ（`header` の中、`.main` の前）に `#intro`（見出し「はじめに」、`閉じる`、`#introSteps`）を置いた。見出しの「はじめに」は計画に文面がないので、項目名から取った。
+- `js/app.js`：文面は `INTRO_REHARM`／`INTRO_HARM`（計画のまま）。`applyHarmUi` で `#introSteps` を差し替える。`showIntro(on)` が表示と `rehamo:intro`（閉じていれば true）を合わせて更新する。起動時は `store.get("rehamo:intro")` が true でなければ出す。`store` は例外を握りつぶすので、保存が使えない環境では毎回出る。
+- 確かめたこと（Playwright）：保存が空なら出る。閉じて読み込み直すと出ない。`使い方` で出し入れできる。モードを替えると文面も替わる。`localStorage` が例外を出す環境でもエラーなしで出る。幅 1280／480px で、箱はツールバーの下にあって重ならず、はみ出さない。`barsPerSystem()` は箱の有無で変わらない（4／2）。スクリーンショットは両方の幅で目で確かめた。
 
 ---
 

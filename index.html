@@ -17,9 +17,12 @@
   <header>
     <div class="tophead">
       <h1>リハモ道場 <span class="en">Reharm Dojo</span><small id="modeDesc">コードを置き換えて、メロディ音がそのコードの何度になるかを確かめる</small></h1>
+      <div class="topbtns">
+      <button class="btn" id="helpBtn" aria-controls="intro" aria-expanded="false">使い方</button>
       <div class="modesw" role="group" aria-label="モード">
         <button data-mode="harm" aria-pressed="false"><b>伴奏付け</b><small>旋律だけからコードを付ける</small></button>
         <button data-mode="reharm" aria-pressed="true"><b>リハモ</b><small>原曲のコードを付け替える</small></button>
+      </div>
       </div>
     </div>
     <div class="toolbar">
@@ -47,6 +50,10 @@
       </div>
       <textarea class="progbox" id="progBox" rows="5" readonly hidden aria-label="コード進行"></textarea>
     </div>
+    <section class="panel intro" id="intro" aria-labelledby="introTitle" hidden>
+      <div class="introhead"><h2 id="introTitle">はじめに</h2><button class="btn small" id="introClose">閉じる</button></div>
+      <ol id="introSteps"></ol>
+    </section>
   </header>
 
   <div class="main">
