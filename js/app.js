@@ -66,8 +66,16 @@ function compileForm(){
       prev=t; return t; });
     cOut.push(row.join(" "));
   });
+  // phrase lengths (optional): whole bar counts that add up to the melody's bars
+  const phTxt=$("#fPhrases").value.trim(); let phrases;
+  if(phTxt){
+    const ns=phTxt.split(/[\s,、]+/).filter(Boolean);
+    if(!ns.every(t=>/^[1-9]\d*$/.test(t))) errs.push("フレーズの区切りは、小節数を空白で区切って書いてください（例：<code>4 4 4 4</code>）。");
+    else { phrases=ns.map(Number); const sum=phrases.reduce((a,n)=>a+n,0);
+      if(mBars.length && sum!==mBars.length) errs.push(`フレーズの小節数の合計（${sum}）が、曲の小節数（${mBars.length}）と合いません。`); }
+  }
   return {errs, def:{name, bpb, slot, mode, src:tonic, origKey:tonic, pickup,
-    bars, chords:cOut.join(" | "), raw:{melody:$("#fMelody").value, chords:$("#fChords").value, pickup:$("#fPickup").value}}};
+    bars, chords:cOut.join(" | "), ...(phrases?{phrases}:{}), raw:{melody:$("#fMelody").value, chords:$("#fChords").value, pickup:$("#fPickup").value, phrases:phTxt}}};
 }
 let editingId=null, delArmed=0;
 function openEditor(id){
@@ -76,6 +84,7 @@ function openEditor(id){
   $("#fName").value=d?d.name:""; $("#fMeter").value=d?String(d.bpb):"4";
   $("#fTonic").value=d?d.src:"C"; $("#fMode").value=d?d.mode:"major";
   $("#fPickup").value=d?d.raw.pickup:""; $("#fMelody").value=d?d.raw.melody:""; $("#fChords").value=d?d.raw.chords:"";
+  $("#fPhrases").value=d ? (d.raw.phrases ?? (d.phrases||[]).join(" ")) : "";
   $("#edDelete").hidden=!d; $("#edDelete").textContent="この曲を削除"; $("#edErr").innerHTML="";
   $("#editor").hidden=false; stop(); $("#fName").focus();
 }
@@ -86,7 +95,7 @@ $("#edClose").onclick=closeEditor;
 $("#editor").addEventListener("keydown",e=>{ if(e.key==="Escape") closeEditor(); });
 $("#editor").addEventListener("click",e=>{ if(e.target.id==="editor") closeEditor(); });
 $("#edSample").onclick=()=>{
-  $("#fName").value="かえるのうた（例）"; $("#fMeter").value="4"; $("#fTonic").value="F"; $("#fMode").value="major"; $("#fPickup").value="";
+  $("#fName").value="かえるのうた（例）"; $("#fPhrases").value=""; $("#fMeter").value="4"; $("#fTonic").value="F"; $("#fMode").value="major"; $("#fPickup").value="";
   $("#fMelody").value="F4 G4 A4 Bb4 | A4 G4 F4:2 |\nA4 Bb4 C5 D5 | C5 Bb4 A4:2 |\nF4:2 F4:2 | F4:2 F4:2 |\nF4:0.5 F4:0.5 G4:0.5 G4:0.5 A4:0.5 A4:0.5 Bb4:0.5 Bb4:0.5 | A4 G4 F4:2";
   $("#fChords").value="F | C7 F | F | C7 F |\nF | - |\nF C7 | C7 F";
 };

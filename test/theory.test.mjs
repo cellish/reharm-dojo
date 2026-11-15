@@ -111,3 +111,13 @@ test("solf reads syllables from the tonic, or from ラ in minor when chosen", ()
   assert.equal(run(`state.laMinor=true; solf(62, {tonic:"D", pc:2, minor:true})`), "ラ");   // from the key's own tonic
   run("state.laMinor=false; null");
 });
+
+test("phrase lengths are kept only when they are whole bars adding up to the song", () => {
+  const ph = p => run(`(()=>{ SONGS.ptest={...SONGS.twinkle${p === undefined ? "" : ", phrases:" + JSON.stringify(p)}}; const s=buildSong("ptest"); delete SONGS.ptest; return s.phrases; })()`);
+  assert.equal(ph(undefined), null);              // built-in songs: 4 bars each
+  assert.deepEqual(ph([4, 4, 2, 2]), [4, 4, 2, 2]); // twinkle has 12 bars
+  assert.equal(ph([4, 4, 4, 4]), null);           // too many bars
+  assert.equal(ph([6, 5.5, 0.5]), null);          // not whole bars
+  assert.equal(ph([12, 0]), null);                // an empty phrase
+  assert.equal(ph("4 4 4"), null);                // not a list
+});

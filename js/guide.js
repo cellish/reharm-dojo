@@ -171,7 +171,8 @@ function barStrip(U, cellHtml){
 }
 function phrases(){
   const bpb=song.bpb, nb=song.nbars, out=[];
-  for(let b=0;b<nb;b+=4){ const e=Math.min(b+3,nb-1);
+  const lens = song.phrases || Array.from({length:Math.ceil(nb/4)}, (x,k)=>Math.min(4, nb-k*4));
+  for(let k=0, b=0; k<lens.length; b+=lens[k++]){ const e=b+lens[k]-1;
     const ns=song.notes.filter(n=>n.start>=e*bpb-1e-6 && n.start<(e+1)*bpb-1e-6 && !n.tiedFrom);
     const lastN=ns.length? ns[ns.length-1] : null;
     out.push({from:b, to:e, end:unitAt(lastN?lastN.start:e*bpb), last:lastN}); }
@@ -283,7 +284,7 @@ function guideHtml(){
     <h3 class="gtitle"><small>ステップ ${step} / ${GSTEPS.length}</small>${GSTEPS[step-1]}</h3>`;
   if(step===1){
     const H=HOME(), PH=PRIM(H), HN=PRIM_NAME(H), sf=c=>pcsOf(c).map(p=>solf(p,H)).join("・");
-    h+=`<p class="hint">${glossed(`まず骨組みです。フレーズ（4小節ずつ）の最後で、曲が<b>終わる（${HN.I}）</b>のか、<b>まだ続く（${HN.V}）</b>のかを決めます。最後の音が「${sf(PH.I)}」なら ${HN.I}、「${sf(PH.V)}」なら ${HN.V} が合います。曲の最後のフレーズは ${HN.I} で終えます。`)}</p><div class="glist">`;
+    h+=`<p class="hint">${glossed(`まず骨組みです。${song.phrases?"フレーズ":"フレーズ（4小節ずつ）"}の最後で、曲が<b>終わる（${HN.I}）</b>のか、<b>まだ続く（${HN.V}）</b>のかを決めます。最後の音が「${sf(PH.I)}」なら ${HN.I}、「${sf(PH.V)}」なら ${HN.V} が合います。曲の最後のフレーズは ${HN.I} で終えます。`)}</p><div class="glist">`;
     phrases().forEach((ph,k,arr)=>{
       const Kp=keyOfCell(ph.end), P=PRIM(Kp), PN=PRIM_NAME(Kp);
       const u=state.chords[ph.end], sol=ph.last?solf(ph.last.midi,Kp):"（休符）";
