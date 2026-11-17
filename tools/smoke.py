@@ -104,6 +104,13 @@ with sync_playwright() as p:
                 a = ev(f"selectCell({k}), {sheet}")
                 if a != ev(f"render(), {sheet}"):
                     errs.append(f"selectCell({k}) on {sid} ({'harm' if harm else 'reharm'}) differs from render()")
+    # candidate grid: filter by technique, hide clashing ones, collapse and explain a group
+    ev('state.harm=false; applyHarmUi(); loadSong("jingle"); state.tab="cand"; selectCell(3); render()')
+    for js in ('candFilter.tech="toward"; renderInsp()', 'candFilter.tech=null; candFilter.fitOnly=true; renderInsp()',
+               'collapsedTech.add("bass"); openTech.add("func"); renderInsp()', 'candFilter.fitOnly=false; collapsedTech.clear(); openTech.clear(); renderInsp()'):
+        ev(js)
+    if ev('document.querySelectorAll("#insp .tile").length') < 10:
+        errs.append("candidate grid: too few tiles after clearing the filters")
     # how long a selection change takes on the longest song (see docs/PLAN.md, items A and I)
     ev('state.harm=false; applyHarmUi(); loadSong("tea")')
     ms = ev("(()=>{ const t=performance.now(); for(let k=0;k<10;k++){ state.sel=k; render(); } return (performance.now()-t)/10; })()")
