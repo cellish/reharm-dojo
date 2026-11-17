@@ -97,15 +97,60 @@ function candItem(it, i, attrs){
     <span class="cn">${esc(sym(c1))}<span class="arr">→</span>${esc(sym(c2))}<i class="dot ${vv}"></i></span>
     <span class="oname">${esc(it.name)}</span><span class="owhy">枠を2つに分けます</span></button>`;
 }
+// ---- the candidate list as a compact grid ----
+// Each proposal is a tile: chord name, its degree in the key, a clash mark, and the melody's degrees against it.
+// The proposal's full name is shown in the group's note line when the tile is hovered or focused (and for the
+// chord now in the cell), so the grid stays small enough to take in at a glance.
+const VMARK = {good:"○", ok:"△", bad:"✕", none:""};
+const shortName = it => (it.name||"").replace(/（.*?）/g,"").trim();
+function tileHtml(it, i, attrs){
+  const K=keyOfCell(i), next=state.chords[i+1];
+  const chords = it.cells ? it.cells.map(x=>x.c) : it.split ? splitPair(it,i) : [it.c];
+  const vv=itemVerdict(it,i), multi=chords.length>1;
+  const cur = !multi && same(it.c, state.chords[i]);
+  const rom = chords.map(c=>analyze(c,K,next).roman).join(" → ");
+  const degs = !multi ? degsHtml(rolesFor(it.c,i)) : "";
+  const badge = it.cells ? `${it.cells.length}枠` : it.split ? "2つに分ける" : "";
+  return `<button class="tile v-${vv}${multi?" wide":""}${cur?" cur":""}" ${attrs} data-name="${esc(it.name||"")}" title="${esc(it.name||"")}：${VERDICT_TEXT[vv]}">
+    <span class="tn${!multi&&sym(chords[0]).length>4?" long":""}">${chords.map(c=>esc(sym(c))).join('<i class="arr">→</i>')}</span>
+    <span class="vm" aria-label="${VERDICT_TEXT[vv]}">${VMARK[vv]}</span>
+    <span class="tmeta"><span class="tr">${esc(rom)}</span>${multi?`<em>${badge}</em><span class="tsub">${esc(shortName(it))}</span>`:`<span class="degs">${degs}</span>`}</span>
+  </button>`;
+}
+let candFilter = { tech:null, fitOnly:false };
+const LONG_PRESS_MS = 450;
+const NOTE_HINT = "候補にマウスを乗せる（タッチ画面では長押しする）と、ここに説明が出ます。";
+const collapsedTech = new Set();
 function candHtml(i){
-  const c=state.chords[i], o=origAt(i);
-  let h = `<div><h2>${state.harm?"コード候補":"置き換え候補"}<span>${slotName(i)}${!state.harm||state.reveal?`（原曲 ${esc(sym(o))}）`:""}</span></h2><div class="groups">`;
-  suggest(i).forEach((g,gi)=>{
-    h+=`<div class="grp"><details data-tech="${esc(g.tech)}"${openTech.has(g.tech)?" open":""}><summary>${esc(g.title)}</summary><p>${glossed(esc(g.desc))}</p></details><div class="cands">`;
-    g.items.forEach((it,ci)=>{ h+=candItem(it,i,`data-g="${gi}" data-c="${ci}"`); });
-    h+=`</div></div>`;
+  const c=state.chords[i], o=origAt(i), groups=suggest(i);
+  const fits = it => itemVerdict(it,i)!=="bad";
+  const total = groups.reduce((a,g)=>a+g.items.length,0);
+  const tf = candFilter.tech && groups.some(g=>g.tech===candFilter.tech) ? candFilter.tech : null;
+  // one note line for the whole list: the hovered/focused tile's full name, else what the chord now in the cell is
+  const curIt = groups.flatMap(g=>g.items).find(it=>it.c && same(it.c,c));
+  const curNote = c.root ? `いまの ${sym(c)}${curIt?`：${curIt.name}`:""}` : "";
+  let h = `<div><h2>${state.harm?"コード候補":"置き換え候補"}<span>${slotName(i)}${!state.harm||state.reveal?`（原曲 ${esc(sym(o))}）`:""}</span></h2>
+    <div class="cfilter" role="group" aria-label="手法で絞る">
+      <button class="chip${tf?"":" on"}" data-ft="">すべて <b>${total}</b></button>
+      ${groups.map(g=>`<button class="chip t-${esc(g.tech)}${tf===g.tech?" on":""}" data-ft="${esc(g.tech)}">${esc(TECH[g.tech]?TECH[g.tech].short:g.label||g.title)} <b>${g.items.length}</b></button>`).join("")}
+      <label class="chk fit"><input type="checkbox" id="fitOnly"${candFilter.fitOnly?" checked":""}>ぶつかる候補を隠す</label>
+    </div>
+    <p class="tnote" id="tnote" data-default="${esc(curNote||NOTE_HINT)}">${esc(curNote||NOTE_HINT)}</p>
+    <div class="groups">`;
+  groups.forEach((g,gi)=>{
+    if(tf && g.tech!==tf) return;
+    const shown = g.items.map((it,ci)=>[it,ci]).filter(([it])=>!candFilter.fitOnly || fits(it));
+    if(!shown.length) return;
+    const closed = collapsedTech.has(g.tech) && !tf;
+    h+=`<section class="tgrp t-${esc(g.tech)}${closed?" closed":""}">
+      <div class="ghead"><button class="gtoggle" data-tg="${esc(g.tech)}" aria-expanded="${!closed}"><span class="chev">▾</span>${esc(g.title)}<span class="cnt">${shown.length}</span></button>
+        ${closed?`<span class="peek">${shown.slice(0,4).map(([it])=>esc(it.c?sym(it.c):"…")).join(" · ")}${shown.length>4?" …":""}</span>`:""}
+        <button class="ginfo" data-gi="${esc(g.tech)}" aria-expanded="${openTech.has(g.tech)}" title="この手法の説明">?</button></div>
+      ${openTech.has(g.tech)?`<p class="gdesc">${glossed(esc(g.desc))}</p>`:""}
+      ${closed?"":`<div class="tiles">${shown.map(([it,ci])=>tileHtml(it,i,`data-g="${gi}" data-c="${ci}"`)).join("")}</div>`}
+    </section>`;
   });
-  h+=`</div></div>
+  h+=`</div><p class="legend2"><span class="vm v-good">○</span> 骨格の音とぶつからない　<span class="vm v-ok">△</span> 短い音がぶつかる　<span class="vm v-bad">✕</span> 骨格の音がぶつかる　／ 下の数字はメロディの度数。</p></div>
   <div><h2>自分で入力</h2><div class="manual">
     <select id="mRoot" aria-label="根音">${MANUAL_ROOTS.map(r=>`<option value="${r}"${c.root&&rootPc(r)===rootPc(c.root)?" selected":""}>${droot(r)}</option>`).join("")}</select>
     <select id="mQual" aria-label="種類">${Object.keys(Q).map(k=>`<option value="${k}"${k===c.q?" selected":""}>${k===""?"（メジャー）":esc(Q[k].show)}</option>`).join("")}</select>
@@ -518,10 +563,24 @@ function renderInspBody(){
   $("#mergeBtn").onclick=()=>{ mergeNext(i); render(); };
   if(state.tab==="guide"){ bindGuide(el); return; }
   if(state.tab==="cand"){
-    el.querySelectorAll("details").forEach(d=>d.addEventListener("toggle",()=>{ d.open?openTech.add(d.dataset.tech):openTech.delete(d.dataset.tech); }));
     const groups=suggest(i);
-    el.querySelectorAll(".cand").forEach(b=>b.onclick=()=>{
-      applyItem(i, groups[+b.dataset.g].items[+b.dataset.c]); previewSel(); });
+    el.querySelectorAll(".tile").forEach(b=>{
+      const note=$("#tnote"), show=()=>{ note.textContent=`${b.querySelector(".tn").textContent}：${b.dataset.name}`; note.classList.add("hov"); },
+            back=()=>{ note.textContent=note.dataset.default||" "; note.classList.remove("hov"); };
+      // touch and pen: a long press only shows the explanation; the tap that ends it does not place the chord
+      let timer=0, held=false;
+      b.addEventListener("pointerdown",e=>{ if(e.pointerType==="mouse") return; held=false;
+        timer=setTimeout(()=>{ held=true; show(); b.classList.add("held"); }, LONG_PRESS_MS); });
+      ["pointerup","pointercancel","pointerleave"].forEach(t=>b.addEventListener(t,()=>{ clearTimeout(timer); b.classList.remove("held"); }));
+      b.addEventListener("contextmenu",e=>{ if(held) e.preventDefault(); });   // some browsers open a menu on long press
+      b.onclick=e=>{ if(held){ held=false; e.preventDefault(); return; }
+        applyItem(i, groups[+b.dataset.g].items[+b.dataset.c]); previewSel(); };
+      b.addEventListener("mouseenter",show); b.addEventListener("focus",show); b.addEventListener("mouseleave",back); b.addEventListener("blur",back);
+    });
+    el.querySelectorAll("[data-ft]").forEach(b=>b.onclick=()=>{ candFilter.tech=b.dataset.ft||null; renderInsp(); });
+    const fo=$("#fitOnly"); if(fo) fo.onchange=()=>{ candFilter.fitOnly=fo.checked; renderInsp(); };
+    el.querySelectorAll("[data-tg]").forEach(b=>b.onclick=()=>{ const t=b.dataset.tg; collapsedTech.has(t)?collapsedTech.delete(t):collapsedTech.add(t); renderInsp(); });
+    el.querySelectorAll("[data-gi]").forEach(b=>b.onclick=()=>{ const t=b.dataset.gi; openTech.has(t)?openTech.delete(t):openTech.add(t); renderInsp(); });
     $("#mApply").onclick=()=>{ const c={root:$("#mRoot").value, q:$("#mQual").value}; if($("#mBass").value) c.bass=$("#mBass").value; setChord(i, c, "手入力"); previewSel(); };
     return;
   }
