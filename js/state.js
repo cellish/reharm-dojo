@@ -17,10 +17,13 @@ function loadSong(id){
   const isOrig = n => song.origKey && rootPc(n)===rootPc(song.origKey);
   $("#keySel").innerHTML = KEYS_NOW().map(([n])=>`<option value="${n}">${keyName(n)}${isOrig(n)?"（原調）":""}</option>`).join("");
   $("#keySel").value=k; setKey(k); setGeom();
-  const saved = store.get(saveKey(id)), total=totalBeats();
-  const okSaved = Array.isArray(saved) && saved.length && saved.every(u=>u && typeof u.s==="number" && u.l>0 && (u.q===null || Q[u.q]!==undefined))
-    && Math.abs(saved.reduce((a,u)=>a+u.l,0)-total)<1e-6;
-  state.chords = okSaved ? saved : (state.harm ? emptyUnits() : origUnits());
+  const fresh = () => state.harm ? emptyUnits() : origUnits();
+  // plans (案): kept per song and mode; saves from before plans existed become the first plan
+  const sp=store.get(plansKey(id)), saved=store.get(saveKey(id));
+  const list = sp && Array.isArray(sp.list) ? sp.list.filter(x=>x && validChords(x.chords)).slice(0,PLAN_MAX) : [];
+  if(!list.length) list.push({name:PLAN_NAMES[0], chords: validChords(saved) ? saved : fresh()});
+  plans={list, cur:Math.min(Math.max(0, sp&&sp.cur|0), list.length-1)}; cmpPlan=null;
+  state.chords = JSON.parse(JSON.stringify(plans.list[plans.cur].chords));
   state.sel=0; rev={target:null, chain:[]}; store.set("rehamo:last", id);
   hist={undo:[], redo:[], last:JSON.stringify(state.chords)}; histButtons();
   $("#editSong").hidden = !song.custom; render();
@@ -28,18 +31,61 @@ function loadSong(id){
 const tabKey = () => state.harm?"rehamo:tab:h":"rehamo:tab";
 const restoreTab = () => { state.tab = store.get(tabKey()) || "guide"; };
 const saveKey = id => (state.harm?"rehamo:h:":"rehamo:")+id;
+// a saved chord list still fits the song (cells cover exactly the song's beats, qualities known)
+const validChords = cs => Array.isArray(cs) && cs.length>0
+  && cs.every(u=>u && typeof u.s==="number" && u.l>0 && (u.q===null || Q[u.q]!==undefined))
+  && Math.abs(cs.reduce((a,u)=>a+u.l,0)-totalBeats())<1e-6;
+
+// ---------- plans (案) ----------
+// Several versions of the chords for one song and mode, to keep and compare. The open plan is
+// state.chords; save() copies it back into plans.list[plans.cur]. cmpPlan is the plan shown beside it.
+const PLAN_NAMES = ["案A","案B","案C","案D","案E"], PLAN_MAX = PLAN_NAMES.length;
+const plansKey = id => (state.harm?"rehamo:hp:":"rehamo:p:")+id;
+let plans = {list:[], cur:0}, cmpPlan = null;
+function storePlans(){ store.set(plansKey(state.songId), plans); }
+function switchPlan(k){
+  if(k===plans.cur || !plans.list[k]) return;
+  stop(); plans.cur=k; if(cmpPlan===k) cmpPlan=null;
+  state.chords=JSON.parse(JSON.stringify(plans.list[k].chords));
+  rev={target:null, chain:[]}; state.sel=Math.min(state.sel, state.chords.length-1);
+  hist={undo:[], redo:[], last:JSON.stringify(state.chords)}; histButtons();
+  store.set(saveKey(state.songId), state.chords); storePlans(); render();
+}
+// a new plan starts as a copy of the open one, and the open one becomes the comparison
+function newPlan(){
+  if(plans.list.length>=PLAN_MAX) return;
+  const used=new Set(plans.list.map(p=>p.name)), name=PLAN_NAMES.find(n=>!used.has(n));
+  plans.list.push({name, chords:JSON.parse(JSON.stringify(state.chords))});
+  const from=plans.cur; switchPlan(plans.list.length-1); cmpPlan=from; render();
+}
+function deletePlan(k){
+  if(plans.list.length<2) return;
+  plans.list.splice(k,1);
+  if(cmpPlan!=null) cmpPlan = cmpPlan===k ? null : cmpPlan>k ? cmpPlan-1 : cmpPlan;
+  const cur = plans.cur===k ? Math.min(k, plans.list.length-1) : plans.cur>k ? plans.cur-1 : plans.cur;
+  plans.cur=-1; switchPlan(cur);
+}
+// the chord of plan k sounding where cell u starts, and whether that plan differs over u's span
+const planCells = k => plans.list[k].chords;
+function planDiff(k, u){
+  const cs=planCells(k), o=cs.find(x=>u.s>=x.s-1e-6 && u.s<x.s+x.l-1e-6);
+  return {o, differs: !o || !same(o,u) || !sameCell(o,u)};
+}
 const emptyUnits = () => Array.from({length:song.nbars},(x,b)=>({s:b*song.bpb, l:song.bpb, root:null, q:null}));
 let hist={undo:[], redo:[], last:null};
 function save(){
   const snap=JSON.stringify(state.chords);
   if(hist.last!=null && snap!==hist.last){ hist.undo.push(hist.last); if(hist.undo.length>200) hist.undo.shift(); hist.redo=[]; }
   hist.last=snap; store.set(saveKey(state.songId), state.chords); histButtons();
+  if(plans.list[plans.cur]){ plans.list[plans.cur].chords=JSON.parse(snap); storePlans(); }
 }
 function histGo(dir){
   const from=dir<0?hist.undo:hist.redo, to=dir<0?hist.redo:hist.undo; if(!from.length) return;
   stop(); to.push(hist.last); hist.last=from.pop(); state.chords=JSON.parse(hist.last);
   rev={target:null, chain:[]}; state.sel=Math.min(state.sel, state.chords.length-1);
-  store.set(saveKey(state.songId), state.chords); histButtons(); render();
+  store.set(saveKey(state.songId), state.chords); histButtons();
+  if(plans.list[plans.cur]){ plans.list[plans.cur].chords=JSON.parse(hist.last); storePlans(); }
+  render();
 }
 function histButtons(){ $("#undoBtn").disabled=!hist.undo.length; $("#redoBtn").disabled=!hist.redo.length; }
 function setChord(i, c, tech){

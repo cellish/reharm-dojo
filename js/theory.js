@@ -124,7 +124,7 @@ const TECH_ORDER = ["seventh","func","bass","cliche","toward","chrom","borrow"];
 // labels saved on cells by earlier versions → technique id
 const TECH_ALIAS = {"4和音化":"seventh","4和音":"seventh","ダイアトニック代理":"func","分数コード（ベースを動かす）":"bass","セカンダリードミナント":"toward","リレイテッド II":"toward",
   "着地点へ":"toward","裏コード":"chrom","パッシング・ディミニッシュ":"chrom","同主短調からの借用":"borrow","同主長調からの借用":"borrow"};
-const techId = label => { if(!label) return null; const k=TECH_ORDER.find(t=>TECH[t].short===label); return k || TECH_ALIAS[label] || (/^逆算/.test(label)?"toward":null); };
+const techId = label => { if(!label) return null; const k=TECH_ORDER.find(t=>TECH[t].short===label); return k || TECH_ALIAS[label] || (/^(逆算|着地点へ)/.test(label)?"toward":null); };
 const ckey = c => rootPc(c.root)+"|"+c.q+"|"+bassPc(c);
 
 function bassOptions(i, K){
