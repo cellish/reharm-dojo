@@ -1,5 +1,5 @@
-// The right-hand panel: selected-cell bar, candidates, 逆算, and the two step-by-step guides.
-// ---------- backward (逆算) helpers ----------
+// The right-hand panel: selected-cell bar, candidates, 「着地点から」 (building backwards from a goal chord), and the two guides.
+// ---------- 「着地点から」 helpers (formerly 逆算) ----------
 const MOTION = {0:"同じ音",1:"半音上行",2:"全音上行",3:"短3度上行",4:"長3度上行",5:"5度下行（強進行）",6:"増4度",7:"5度上行",8:"長3度下行",9:"短3度下行",10:"全音下行",11:"半音下行"};
 const motion = (a,b) => MOTION[mod(bassPc(b)-bassPc(a))];
 const pcsOf = c => Object.keys(Q[c.q].ct).map(iv=>mod(rootPc(c.root)+ +iv));
@@ -73,7 +73,7 @@ function selbarHtml(i){
     </span>
   </div>
   <div class="rolerow"><span class="pill ${v}">${VERDICT_TEXT[v]}</span><span class="vmsg">${verdictMsg(roles,v)}</span>${answerNote(i)?`<span class="ansnote">${esc(answerNote(i))}</span>`:""}
-    ${state.harm&&!state.reveal?"":`<span class="cmpset" title="選んだ枠のまわり4小節を聴き比べます">聴き比べ <button class="btn small" id="selCmpO">▶ 原曲</button><button class="btn small" id="selCmpN">▶ いま</button></span>`}</div>`;
+    ${state.harm&&!state.reveal&&cmpPlan==null?"":`<span class="cmpset" title="選んだ枠のまわり4小節を聴き比べます">聴き比べ ${state.harm&&!state.reveal?"":`<button class="btn small" id="selCmpO">▶ 原曲</button>`}<button class="btn small" id="selCmpN">▶ ${plans.list.length>1?esc(plans.list[plans.cur].name):"いま"}</button>${cmpPlan!=null?`<button class="btn small" id="selCmpP">▶ ${esc(plans.list[cmpPlan].name)}</button>`:""}</span>`}</div>`;
 }
 function candButton(cd, i, attrs, extra){
   const rs=rolesFor(cd,i), vv=verdict(rs);
@@ -119,7 +119,7 @@ function revHtml(){
   if(rev.target==null){
     const ends=phraseEnds();
     return `<div class="revbox">
-      <h2>逆算<span>着地点を決めて、そこへ向かうコードを手前に積んでいく</span></h2>
+      <h2>着地点から作る<span>着地点を決めて、そこへ向かうコードを手前に積んでいく</span></h2>
       <ol class="steps"><li class="on">着地点（一時的な I）を決める</li><li>直前に、着地点へ向かうコードを置く</li><li>さらに手前へさかのぼる</li></ol>
       <p class="hint">着地点のコードが、そのまま「I」になります。IIm や IV を選べば、そのコードへのセカンダリードミナントを作る練習になります。</p>
       <p class="hint">4和音化・代理・借用など、着地点へ向かう以外の色づけは「置き換え候補」タブで行います。</p>
@@ -132,10 +132,13 @@ function revHtml(){
     </div>`;
   }
   const t=rev.target, last = rev.chain.length? rev.chain[rev.chain.length-1].i : t, p=last-1, X=state.chords[last];
-  const order=[...rev.chain].reverse().map(e=>e.i).concat([t]);
+  const order=[...rev.chain].reverse().map(e=>e.i).concat([t]), T=state.chords[t];
+  // degrees seen from the goal: the goal chord is I (Im if minor), e.g. IIm7 → V7 → I
+  const KT={tonic:T.root, pc:rootPc(T.root), minor:isMinorish(T.q)}, deg=c=>romanOf(c,KT);
   let h=`<div class="revbox">
-    <h2>逆算<span>着地点 ${slotName(t)} の ${esc(sym(state.chords[t]))} を I とみなす</span></h2>
-    <div class="chainrow">${order.map((k,j)=>`<span class="clink${k===t?" t":""}">${esc(sym(state.chords[k]))}${k===t?"<small>I</small>":""}</span>${j<order.length-1?'<span class="arr">→</span>':""}`).join("")}</div>
+    <h2>着地点から作る<span>着地点 ${slotName(t)} の ${esc(sym(T))} を ${KT.minor?"Im":"I"} とみなす</span></h2>
+    <div class="chainrow">${order.map((k,j)=>`<span class="clink${k===t?" t":""}"><b>${esc(sym(state.chords[k]))}</b><small>${esc(deg(state.chords[k]))}</small></span>${j<order.length-1?'<span class="arr">→</span>':""}`).join("")}</div>
+    <p class="hint chainnote">下の小さな字は、着地点を ${KT.minor?"Im":"I"} とみたときの度数です。</p>
     <div class="irow">
       <button class="btn" id="revPlay">▶ 流れを聴く</button>
       <button class="btn" id="revUndo" ${rev.chain.length?"":"disabled"}>一つ戻す</button>
@@ -148,7 +151,7 @@ function revHtml(){
     ${P.l>=2?`<button class="btn small" id="revSplit">この枠を分割して、後半に置く</button>`:""}
     <div class="cands revopts">`;
   approachOptions(X, last===t).forEach((o,k)=>{
-    h+=candButton(o.c, p, `data-o="${k}"`, `<span class="oname">${esc(o.short)}・${esc(o.name)}</span><span class="owhy">${esc(o.why)}<br>ベース ${motion(o.c,X)}</span>`);
+    h+=candButton(o.c, p, `data-o="${k}"`, `<span class="oname">${esc(o.short)}・${esc(o.name)}${last!==t?`（着地点から見て ${esc(deg(o.c))}）`:""}</span><span class="owhy">${esc(o.why)}<br>ベース ${motion(o.c,X)}</span>`);
   });
   h+=`</div><p class="hint">置いたあとは、同じ要領でさらに手前へ進めます。元の流れに戻したいところで止めて、「いまの入口」のつながりを確かめてください。</p></div>`;
   return h;
@@ -197,17 +200,36 @@ function skeletonNotes(i){
 }
 const skelIdx = i => new Set(skeletonNotes(i).flatMap(g=>g.idxs));
 const contains = (c, pcs) => { const set=new Set(pcsOf(c)); return pcs.every(p=>set.has(p)); };
-const isHalfMeter = () => song.bpb===4;
-const rhythmNow = () => state.chords.every(u=>u.l===song.bpb) ? "bar" : "half";
-function setRhythm(mode){
-  if(!isHalfMeter()) return;
-  const bpb=song.bpb, nb=song.nbars, out=[];
-  for(let b=0;b<nb;b++){
-    const us=state.chords.filter(u=>u.s>=b*bpb-1e-6 && u.s<(b+1)*bpb-1e-6);
-    const first=us.find(u=>u.root)||us[0];
-    if(mode==="bar") out.push({s:b*bpb, l:bpb, root:first.root, q:first.q, tech:first.tech});
-    else us.forEach(u=>{ if(u.l===bpb) out.push({...u, l:2}, {...u, s:u.s+2, l:2}); else out.push(u); });
-  }
+// How often the chord changes, per metre: each pattern divides every bar into cells of these lengths (beats).
+const RHYTHMS = {
+  4:[{id:"bar", label:"1小節に1つ", lens:[4]}, {id:"half", label:"2拍に1つ", lens:[2,2]}, {id:"beat", label:"1拍に1つ", lens:[1,1,1,1]}],
+  3:[{id:"bar", label:"1小節に1つ", lens:[3]}, {id:"21", label:"2拍＋1拍", lens:[2,1]}, {id:"beat", label:"1拍に1つ", lens:[1,1,1]}],
+};
+const rhythmsFor = bpb => RHYTHMS[bpb] || [{id:"bar", label:"1小節に1つ", lens:[bpb]}, {id:"beat", label:"1拍に1つ", lens:Array(bpb).fill(1)}];
+const lensEq = (a,b) => a.length===b.length && a.every((x,k)=>Math.abs(x-b[k])<1e-6);
+const barLens = b => state.chords.filter(u=>u.s>=b*song.bpb-1e-6 && u.s<(b+1)*song.bpb-1e-6).map(u=>u.l);
+// "auto": one chord for the bar when one diatonic triad holds all of the bar's structural notes,
+// otherwise the metre's two-part split (2+2 in 4/4, 2+1 in 3/4)
+function autoLens(b){
+  const bpb=song.bpb, s=b*bpb, K=keyAt(s);
+  const pcs=[...new Set(notesSpan(s,bpb).filter(n=>n.strong).map(n=>mod(n.midi)))];
+  const one=TRIADS[K.minor?"minor":"major"].some(x=>contains(KC(K,...x), pcs));
+  const two=rhythmsFor(bpb).find(r=>r.lens.length===2);
+  return one || !two ? [bpb] : two.lens;
+}
+const BARS = () => [...Array(song.nbars).keys()];
+function rhythmNow(){
+  const r=rhythmsFor(song.bpb).find(r=>BARS().every(b=>lensEq(barLens(b),r.lens)));
+  return r ? r.id : BARS().every(b=>lensEq(barLens(b),autoLens(b))) ? "auto" : "mix";
+}
+// Re-divide every bar; each new cell takes the chord that was sounding where it starts.
+function setRhythm(id){
+  const bpb=song.bpb, r=rhythmsFor(bpb).find(x=>x.id===id), out=[];
+  if(!r && id!=="auto") return;
+  BARS().forEach(b=>{ let s=b*bpb;
+    (id==="auto" ? autoLens(b) : r.lens).forEach(l=>{
+      const o=state.chords.find(u=>s>=u.s-1e-6 && s<u.s+u.l-1e-6) || {root:null, q:null};
+      out.push({s, l, root:o.root, q:o.q, ...(o.bass?{bass:o.bass}:{}), ...(o.tech?{tech:o.tech}:{})}); s+=l; }); });
   state.chords=out; rev={target:null, chain:[]}; state.sel=Math.min(state.sel,out.length-1); save();
 }
 function flowIssues(){
@@ -300,11 +322,11 @@ function guideHtml(){
   }
   if(step===2){
     h+=`<p class="hint">${glossed(`次に、コードを変える間隔を決めます。初めは<b>1小節に1つ</b>がおすすめです。楽譜の音符の下に出ている「ド・レ・ミ」のうち、<b>濃い字が骨格の音</b>（長い音や強拍の音）です。この音がコードの音になるように選びます。強拍でも短い音は、飾りの音のことがあります。`)}</p>`;
-    if(isHalfMeter()){
-      const r=rhythmNow();
-      h+=`<div class="gbtns"><button class="btn${r==="bar"?" primary":""}" data-rh="bar">1小節に1つ</button><button class="btn${r==="half"?" primary":""}" data-rh="half">2拍に1つ</button></div>
-        <p class="hint">切り替えると、置いたコードは各小節の最初のものに揃います。</p>`;
-    } else h+=`<p class="hint">この曲は ${song.bpb}/4 拍子なので、1小節に1つで進めます。必要な所だけ、後で「枠を分割」で細かくできます。</p>`;
+    const r=rhythmNow();
+    h+=`<div class="gbtns">${rhythmsFor(song.bpb).map(x=>`<button class="btn${r===x.id?" primary":""}" data-rh="${x.id}">${x.label}</button>`).join("")}
+        <button class="btn${r==="auto"?" primary":""}" data-rh="auto">骨格の音に合わせる</button></div>
+      <p class="hint">「骨格の音に合わせる」は、小節の骨格の音が1つの三和音に収まれば1小節に1つ、収まらなければ${song.bpb===3?"2拍＋1拍":"半分"}に分けます。
+        切り替えると、新しい枠には、その位置で鳴っていたコードが入ります。1つの小節だけ変えたいときは「枠を分割」「次と結合」を使います。${r==="mix"?"<br>いまは、小節によって間隔が違います。":""}</p>`;
   }
   if(step===3){
     const empt=state.chords.map((u,k)=>k).filter(k=>!state.chords[k].root);
@@ -346,7 +368,7 @@ function guideHtml(){
                       : `<p class="hint">このコードには、ここでの候補はありません。「コード候補」タブを見てください。</p>`;
     }
     h+=`<p class="hint">さらに進むなら：</p><div class="gbtns">
-      <button class="btn small" id="toRev" ${c.root&&i>0?"":"disabled"}>この枠を着地点に逆算する</button>
+      <button class="btn small" id="toRev" ${c.root&&i>0?"":"disabled"}>この枠を着地点にして手前を作る</button>
       <button class="btn small" id="toCand">コード候補タブを開く</button></div>`;
   }
   h+=`<div class="gnav"><button class="btn" id="gPrev" ${step===1?"disabled":""}>← 前へ</button><span class="sp"></span><button class="btn primary" id="gNext" ${step===GSTEPS.length?"disabled":""}>次へ →</button></div></div>`;
@@ -385,7 +407,7 @@ const RDESC = {
   func:"同じ働きをもつ別のコードに替えます。I ↔ VIm・IIIm、IV ↔ IIm のように、メロディがよく乗るものを選びます。V のあとの I を VIm にすると、終わったと思わせて続ける「偽終止」になります。",
   bass:"コードはそのままに、ベースの音だけを変えます。分数コード C/E は「C のコードで、ベースは E」という意味です。転回形でベースをなめらかにつなぐ、ベースを1音ずつ下げる（上げる）、同じベースを保つ（ペダル）、V の代わりに IV/V の形を使う、が代表です。楽譜の下にベースラインが出ます。",
   cliche:"同じコードが2枠以上続く所で使います。コードの中の1音だけを半音ずつ動かすと、止まっていた響きに線が生まれます（クリシェ）。提案を選ぶと、続いている枠にまとめて入ります。",
-  toward:"次のコードを着地点とみなして、そこへ向かうコードを置きます。次のコードの V7（セカンダリードミナント）や II が代表です。「II–V にする」「II–V に分ける」を選ぶと、枠が2つに分かれて両方入ります。逆算タブで、着地点から手前へ組み立てることもできます。",
+  toward:"次のコードを着地点とみなして、そこへ向かうコードを置きます。次のコードの V7（セカンダリードミナント）や II が代表です。「II–V にする」「II–V に分ける」を選ぶと、枠が2つに分かれて両方入ります。「着地点から」タブで、着地点から手前へ組み立てることもできます。",
   chrom:"V7 を裏コード（♭II7）に替えたり、ディミニッシュをはさんだりして、ベースを半音で動かします。",
   borrow:"同じ主音の短調（短調の曲なら長調）からコードを借りて、陰りや明るさを足します。IVm や ♭VII7 が定番です。",
   review:"最後に見直します。変えすぎていないか、骨格の音のぶつかりが増えていないかを確かめ、原曲と聴き比べます。全部の枠を変える必要はありません。"
@@ -398,10 +420,11 @@ function cmpRange(){
   const bar=Math.floor(u.s/bpb), b0=Math.max(0,bar-1)*bpb, b1=Math.min(nb,bar+3)*bpb;
   return {b0,b1};
 }
-function playCompare(orig){
-  const {b0,b1}=cmpRange(), U=orig?origUnits():state.chords;
+// the four bars around the selected cell, as the original ("orig"), the open plan ("cmp") or the comparison plan ("plancmp")
+function playCompare(which){
+  const {b0,b1}=cmpRange(), U = which==="orig" ? origUnits() : which==="plancmp" ? planCells(cmpPlan) : state.chords;
   const from=U.findIndex(x=>x.s+x.l>b0+1e-6), to=U.findIndex(x=>x.s>=b1-1e-6);
-  playRange(Math.max(0,from), to<0?U.length:to, U, orig?"orig":"cmp");
+  playRange(Math.max(0,from), to<0?U.length:to, U, which);
 }
 function rGuideHtml(){
   const step=getGStep(), id=RFLOW[step-1], i=state.sel, n=RSTEPS.length;
@@ -434,7 +457,7 @@ function rGuideHtml(){
     h+= opts.length ? `<div class="cands revopts">${opts.map((o,k)=>candItem(o,i,`data-rc="${k}"`)).join("")}</div>`
                     : `<p class="hint">この枠では、この段階の候補はありません。コード名が点線で囲まれた枠を選んでください。</p>`;
     h+=`<div class="gbtns"><span class="hint" style="font-size:12.5px">メロディに合う候補がある枠：${usable.length}（コード名を点線で囲んであります）</span>${usable.length?`<button class="btn small" id="nextUsable">次の枠へ</button>`:""}</div>`;
-    if(id==="toward") h+=`<div class="gbtns"><button class="btn small" id="toRev2" ${i<state.chords.length-1&&state.chords[i+1]?.root?"":"disabled"}>次の枠を着地点にして逆算タブで作る</button></div>`;
+    if(id==="toward") h+=`<div class="gbtns"><button class="btn small" id="toRev2" ${i<state.chords.length-1&&state.chords[i+1]?.root?"":"disabled"}>次の枠を着地点にして「着地点から」タブで作る</button></div>`;
   }
   h+=`<div class="gnav"><button class="btn" id="gPrev" ${step===1?"disabled":""}>← 前へ</button><span class="sp"></span><button class="btn primary" id="gNext" ${step===n?"disabled":""}>次へ →</button></div></div>`;
   return h;
@@ -478,7 +501,7 @@ function renderInspBody(){
   const tabs = `<div class="tabs" role="tablist">
     <button role="tab" data-tab="guide" aria-selected="${state.tab==="guide"}">ガイド</button>
     <button role="tab" data-tab="cand" aria-selected="${state.tab==="cand"}">${state.harm?"コード候補":"置き換え候補"}</button>
-    <button role="tab" data-tab="rev" aria-selected="${state.tab==="rev"}">逆算</button></div>`;
+    <button role="tab" data-tab="rev" aria-selected="${state.tab==="rev"}">着地点から</button></div>`;
   const el=$("#insp"); el.innerHTML = tabs + (state.tab==="rev" ? revHtml() : state.tab==="guide" ? guideHtml() : candHtml(i));
   el.querySelectorAll(".tabs button").forEach(b=>b.onclick=()=>{ state.tab=b.dataset.tab; store.set(tabKey(),state.tab); el.scrollTop=0; renderInsp(); });
   if(el.dataset.sel!==String(i)){ el.scrollTop=0; el.dataset.sel=i; }
@@ -488,8 +511,9 @@ function renderInspBody(){
     playRange(Math.max(0,from), state.chords.length, state.chords, "prevbar"); } };
   $("#revert").onclick=()=>{ if(state.harm){ const u=state.chords[i]; state.chords[i]={s:u.s,l:u.l,root:null,q:null}; save(); render(); } else { restoreOrig(i); render(); previewSel(); } };
   const sco=$("#selCmpO"), scn=$("#selCmpN");
-  if(sco) sco.onclick=()=>{ if(play&&play.mode==="orig") stop(); else playCompare(true); };
-  if(scn) scn.onclick=()=>{ if(play&&play.mode==="cmp") stop(); else playCompare(false); };
+  if(sco) sco.onclick=()=>{ if(play&&play.mode==="orig") stop(); else playCompare("orig"); };
+  if(scn) scn.onclick=()=>{ if(play&&play.mode==="cmp") stop(); else playCompare("cmp"); };
+  const scp=$("#selCmpP"); if(scp) scp.onclick=()=>{ if(play&&play.mode==="plancmp") stop(); else playCompare("plancmp"); };
   $("#splitBtn").onclick=()=>{ splitUnit(i); render(); };
   $("#mergeBtn").onclick=()=>{ mergeNext(i); render(); };
   if(state.tab==="guide"){ bindGuide(el); return; }
@@ -516,7 +540,7 @@ function renderInspBody(){
   el.querySelectorAll(".revopts .cand").forEach(b=>b.onclick=()=>{
     const o=opts[+b.dataset.o], u=state.chords[p];
     rev.chain.push({i:p, prev:{...u}});
-    state.chords[p]={s:u.s, l:u.l, root:o.c.root, q:o.c.q, tech:"逆算 "+o.short};
+    state.chords[p]={s:u.s, l:u.l, root:o.c.root, q:o.c.q, tech:"着地点へ "+o.short};
     state.sel=p; save(); render();
     playRange(p, t+1, state.chords, "slot");
   });

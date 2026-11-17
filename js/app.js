@@ -112,7 +112,7 @@ $("#edForm").addEventListener("submit",e=>{
   const list=customList().filter(d=>d.id!==def.id); list.push(def); store.set("rehamo:songs", list);
   SONGS[def.id]={...def, custom:true};
   vfCache.clear();   // an edited song keeps its id, so cached systems of the old version must go
-  store.set("rehamo:"+def.id, null); store.set("rehamo:key:"+def.id, null);
+  store.set("rehamo:"+def.id, null); store.set("rehamo:key:"+def.id, null); store.set("rehamo:h:"+def.id, null); store.set("rehamo:p:"+def.id, null); store.set("rehamo:hp:"+def.id, null);
   closeEditor(); state.songId=null; songOptions(); loadSong(def.id);
 });
 registerCustom();
@@ -234,7 +234,7 @@ $("#loopOn").onchange=e=>{ state.loop=e.target.checked; store.set("rehamo:loop",
 $("#melOn").onchange=e=>{ state.melOn=e.target.checked; };
 // the current progression as plain text, four bars to a line (with a line of degrees when they are shown)
 function progText(){
-  const head=`${song.name}（Key: ${keyName(xp.name)}、${song.bpb}/4）`, rows=[], degs=[]; let row=[], drow=[];
+  const head=`${song.name}${plans.list.length>1?" "+plans.list[plans.cur].name:""}（Key: ${keyName(xp.name)}、${song.bpb}/4）`, rows=[], degs=[]; let row=[], drow=[];
   for(let b=0;b<song.nbars;b++){
     const cs=state.chords.map((u,k)=>[u,k]).filter(([u])=>u.s>=b*song.bpb-1e-6 && u.s<(b+1)*song.bpb-1e-6);
     row.push(cs.map(([u])=>u.root?sym(u):"？").join("  "));
@@ -248,13 +248,27 @@ async function copyText(t){
   try{ const ta=document.createElement("textarea"); ta.value=t; ta.style.cssText="position:fixed;opacity:0"; document.body.appendChild(ta);
     ta.select(); const ok=document.execCommand("copy"); ta.remove(); return ok; }catch(e){ return false; }
 }
+// plan bar: one delegated handler (the bar is rebuilt on every render)
+$("#plansBar").addEventListener("click", e=>{
+  const b=e.target.closest("button"); if(!b) return;
+  if(b.dataset.plan!=null) return switchPlan(+b.dataset.plan);
+  if(b.id==="planNew") return newPlan();
+  if(b.id==="planDel"){ b.hidden=true; $("#planDelConfirm").hidden=false; return; }
+  if(b.id==="planDelNo"){ $("#planDelConfirm").hidden=true; $("#planDel").hidden=false; return; }
+  if(b.id==="planDelYes") return deletePlan(plans.cur);
+  if(b.id==="planPlayCmp"){ if(play&&play.mode==="plan") stop(); else { const U=planCells(cmpPlan); playRange(0,U.length,U,"plan"); } renderPlans(); }
+});
+$("#plansBar").addEventListener("change", e=>{
+  if(e.target.id==="planCmp"){ cmpPlan = e.target.value==="" ? null : +e.target.value; render(); }
+});
 $("#copyProg").onclick=async()=>{
   const t=progText(), ok=await copyText(t), b=$("#copyProg"), box=$("#progBox");
   if(ok){ box.hidden=true; b.textContent="コピーしました"; }
   else { box.value=t; box.hidden=false; box.focus(); box.select(); b.textContent="下に表示しました"; }   // clipboard refused: show it for manual copying
   setTimeout(()=>{ b.textContent="コード進行をコピー"; }, 1800);
 };
-$("#reset").onclick=()=>{ $("#resetMsg").textContent = state.harm?"置いたコードをすべて消しますか？":"置き換えをすべて元に戻しますか？";
+$("#reset").onclick=()=>{ const pn = plans.list.length>1 ? plans.list[plans.cur].name+"の" : "";
+  $("#resetMsg").textContent = state.harm?`${pn}置いたコードをすべて消しますか？`:`${pn}置き換えをすべて元に戻しますか？`;
   $("#resetConfirm").hidden=false; $("#resetYes").focus(); };
 $("#resetNo").onclick=()=>{ $("#resetConfirm").hidden=true; };
 $("#resetYes").onclick=()=>{ $("#resetConfirm").hidden=true; stop();

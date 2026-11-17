@@ -47,7 +47,7 @@ python3 tools/smoke.py      # 全曲・両モード・全ステップを開き�
 | `js/theory.js` | 旋律とコードの判定（`roleOf`、`rolesFor`、`verdict`、`isStrong`）、調と機能（`keyAt`、`analyze`）、提案（`techniques`、`harmSuggest`）。 |
 | `js/state.js` | `state`、保存、Undo（`save`、`histGo`）、枠の編集（`setChord`、`splitUnit`、`mergeNext`）。 |
 | `js/score.js` | 楽譜。VexFlow での描画 `vfSystem` と、全体の描き直し `render`。 |
-| `js/guide.js` | 右のパネル。選択中の枠のバー、候補、逆算、2つのガイド（`guideHtml`＝伴奏付け、`rGuideHtml`＝リハモ）。 |
+| `js/guide.js` | 右のパネル。選択中の枠のバー、候補、「着地点から」（旧称：逆算）、2つのガイド（`guideHtml`＝伴奏付け、`rGuideHtml`＝リハモ）。 |
 | `js/audio.js` | Web Audio での再生（`playRange`、`tone`）。 |
 | `js/app.js` | 曲のメニュー、曲の入力、キー操作、凡例の用語説明、起動。 |
 | `vendor/` | VexFlow 5.0.0（同梱。編集しない）。 |
@@ -96,7 +96,7 @@ python3 tools/smoke.py      # 全曲・両モード・全ステップを開き�
 ## 文言の決まり
 
 - 画面の文は「です・ます」で、短く。専門用語は初めて出る所で一言説明するか、用語説明（凡例の仕組み）につなぐ。
-- 既存の用語を使う：枠、骨格の音、和声音、テンション、アボイド、非和声音、機能（T・S・D）、度数、置き換え候補、逆算、着地点。新しい呼び名を作らない。
+- 既存の用語を使う：枠、骨格の音、和声音、テンション、アボイド、非和声音、機能（T・S・D）、度数、置き換え候補、着地点、案（A案・B案…）。タブ名は「着地点から」（旧称の「逆算」は使わない）。新しい呼び名を作らない。
 - コードの中のコメントは英語で、「なぜそうしているか」を書く。
 
 ## コミットと公開

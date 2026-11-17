@@ -99,6 +99,13 @@ label.chk{display:inline-flex;gap:4px;align-items:center;font-size:13px;color:va
 .panel{background:var(--sheet);border:1px solid var(--rule);border-radius:10px}
 .sheetwrap{padding:16px 16px 12px;display:flex;flex-direction:column;gap:12px;min-width:0}
 .summary{display:flex;flex-wrap:wrap;gap:8px 16px;font-size:13px;color:var(--ink-2);align-items:center}
+.plans{display:flex;flex-wrap:wrap;gap:6px 8px;align-items:center;font-size:13px;color:var(--ink-2);padding-bottom:8px;border-bottom:1px solid var(--rule)}
+.plans .sp{flex:1}
+.plans .btn.plan{min-width:3.6em}
+.plans .btn.plan.on{background:var(--accent);border-color:var(--accent);color:#fff}
+.plans b{color:var(--ink);font-variant-numeric:tabular-nums}
+.plans .confirm{display:inline-flex;gap:6px;align-items:center}
+.cmpc{font-family:var(--f-chord);font-size:13px;color:var(--av)}   /* the comparison plan's chord where it differs */
 .summary b{color:var(--ink);font-variant-numeric:tabular-nums}
 .pill{display:inline-flex;align-items:center;gap:5px;padding:1px 9px;border-radius:99px;font-size:12px;font-weight:500}
 .pill.good{background:color-mix(in srgb,var(--ct) 14%,transparent);color:var(--ct)}
@@ -153,9 +160,11 @@ label.chk{display:inline-flex;gap:4px;align-items:center;font-size:13px;color:va
 .revsel{display:flex;flex-wrap:wrap;gap:8px;align-items:center;font-size:13px}
 .revsel .cn,.clink{font-family:var(--f-chord);font-weight:600;font-size:18px}
 .chainrow{display:flex;flex-wrap:wrap;align-items:center;gap:4px 6px;padding:8px 10px;background:var(--soft);border-radius:8px}
-.clink{display:inline-flex;align-items:baseline;gap:3px}
+.clink{display:inline-flex;flex-direction:column;align-items:center;line-height:1.25}
 .clink.t{color:var(--accent)}
-.clink small{font-family:var(--f-body);font-size:11px;border:1px solid currentColor;border-radius:4px;padding:0 4px}
+.clink small{font-family:var(--f-chord);font-weight:500;font-size:13px;color:var(--ink-2)}   /* degree seen from the goal */
+.clink.t small{color:var(--accent);border:1px solid currentColor;border-radius:4px;padding:0 4px}
+.chainnote{font-size:12px;margin:4px 0 0}
 .arr{color:var(--ink-2)}
 .cand .small{font-size:11px;color:var(--ink-2)}
 .revopts{flex-direction:column}

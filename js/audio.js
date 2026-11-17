@@ -55,16 +55,18 @@ function playRange(from,to,chords,mode,startBeat,origin){
     // repeat on the end beat; a short audition of a cell ("slot") always plays once
     if(beat>=b1 && state.loop && mode!=="slot"){ replayBeats(play, start); return; }
     if(beat>=b1){ play.bus.disconnect && setTimeout(()=>bus.disconnect(),600); play=null; markPlaying(-1); playButtons(); return; }
-    markPlaying(beat>=0 && mode!=="orig"? unitAt(beat):-1); play.raf=requestAnimationFrame(tick); };
+    markPlaying(beat>=0 && !OTHER_CELLS.has(mode) ? unitAt(beat):-1); play.raf=requestAnimationFrame(tick); };
   play.raf=requestAnimationFrame(tick); playButtons();
 }
 // Play the same span of beats again from startBeat. Cells may have been merged or split since the range
 // was chosen, so the cell indices are found anew from the beats (the original's cells never change).
 function replayBeats(p, startBeat){
-  const U = p.mode==="orig" ? p.chords : state.chords;
+  const U = OTHER_CELLS.has(p.mode) ? p.chords : state.chords;
   const from=U.findIndex(x=>x.s+x.l>p.start+1e-6), to=U.findIndex(x=>x.s>=p.end-1e-6);
   playRange(Math.max(0,from), to<0?U.length:to, U, p.mode, startBeat, p.start);
 }
+// modes that play cells other than the open plan's (the original, another plan): no position marks on the score
+const OTHER_CELLS = new Set(["orig","plan","plancmp"]);
 let lastPlaying=-1;
 function markPlaying(i){
   if(i===lastPlaying) return; lastPlaying=i;
@@ -77,5 +79,6 @@ function playButtons(){
   const hh=$("#hearHere"), hp=$("#hearPrev");
   if(hh) hh.textContent = play&&play.mode==="here" ? "■ 停止" : "▶ ここから";
   if(hp) hp.textContent = play&&play.mode==="prevbar" ? "■ 停止" : "▶ 前小節から";
+  const pc=$("#planPlayCmp"); if(pc && cmpPlan!=null) pc.textContent = play&&play.mode==="plan" ? "■ 停止" : `▶ ${plans.list[cmpPlan].name}を再生`;
 }
 function previewSel(){ const i=state.sel; playRange(i, Math.min(i+2,state.chords.length), state.chords, "slot"); }

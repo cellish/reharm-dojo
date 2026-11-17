@@ -43,7 +43,7 @@ function vfModW(first){
 }
 function vfKey(midi){ const s=dnote(midi); return LETTERS[s.li].toLowerCase()+(s.alter>0?"#".repeat(s.alter):"b".repeat(-s.alter))+"/"+s.oct; }
 // Engraving a system is the slow part of render(), so its result is cached per system. The key holds
-// everything that changes the engraving; the selection, the 逆算 marks and the play position are not in
+// everything that changes the engraving; the selection, the 「着地点から」 marks and the play position are not in
 // it, because svg() reads them from state each time it builds the markup.
 let VF_CACHE = true;   // false: engrave every time (tools/smoke.py compares both)
 const vfCache = new Map(), VF_CACHE_MAX = 64;
@@ -191,6 +191,24 @@ function selectCell(i){
   sheet.querySelectorAll(`.slot[data-i="${i}"], rect.hl[data-i="${i}"]`).forEach(e=>e.classList.add("sel"));
   renderInsp();
 }
+// the comparison plan's chord over cell i, shown on the line above the chord name when it differs
+function cmpMark(i){
+  const d=planDiff(cmpPlan, state.chords[i]);
+  return d.differs ? `<span class="cmpc">${esc(plans.list[cmpPlan].name)} ${d.o&&d.o.root?esc(sym(d.o)):"—"}</span>` : "";
+}
+function renderPlans(){
+  const L=plans.list, n=L.length, cur=plans.cur;
+  const diffs = cmpPlan!=null ? state.chords.filter(u=>planDiff(cmpPlan,u).differs).length : 0;
+  $("#plansBar").innerHTML = `<span class="tlabel">案</span>
+    ${L.map((p,k)=>`<button class="btn small plan${k===cur?" on":""}" data-plan="${k}" aria-pressed="${k===cur}">${esc(p.name)}</button>`).join("")}
+    ${n<PLAN_MAX?`<button class="btn small" id="planNew" title="いまの案を写して、新しい案を作ります">＋ 新しい案</button>`:""}
+    ${n>1?`<label class="chk">比べる相手 <select id="planCmp" class="btn small"><option value="">なし</option>${L.map((p,k)=>k===cur?"":`<option value="${k}"${k===cmpPlan?" selected":""}>${esc(p.name)}</option>`).join("")}</select></label>`:""}
+    ${cmpPlan!=null?`<span>違う枠 <b>${diffs}</b></span><button class="btn small" id="planPlayCmp">${play&&play.mode==="plan"?"■ 停止":`▶ ${esc(L[cmpPlan].name)}を再生`}</button>`:""}
+    <span class="sp"></span>
+    ${n>1?`<button class="btn small warn" id="planDel">${esc(L[cur].name)}を削除</button>
+      <span class="confirm" id="planDelConfirm" hidden>${esc(L[cur].name)}を削除しますか？（元に戻せません）
+        <button class="btn small warn" id="planDelYes">削除</button><button class="btn small" id="planDelNo">やめる</button></span>`:""}`;
+}
 function render(){
   $("#songSel").value=state.songId;
   const n=state.chords.length, bpb=song.bpb, nb=song.nbars, bps=barsPerSystem();
@@ -215,19 +233,20 @@ function render(){
       else if(state.harm && state.reveal && c.root){ const K=keyAt(c.s), A=analyze(c,K); if(A.fn && A.fn===analyze(o,K).fn) fnMatch++; }
       const cls = (canSet.has(i)?" can":"")+(i===state.sel?" sel":"")+(i===rev.target?" tgt":"")+(chainSet.has(i)?" chain":"")+(c.l<=1?" small":"");
       html+=`<button class="slot${cls}" data-i="${i}" aria-label="${slotName(i)} ${esc(sym(c))}">
-        <span class="orig">${state.harm ? (state.reveal?`<span class="ans${same(c,o)?" hit":""}">原曲 ${esc(sym(o))}</span>`:esc(c.tech||"")) : (mod_?`<s>${esc(sym(o))}</s> ${esc(c.tech||"")}`:"")}</span>
+        <span class="orig">${cmpPlan!=null ? cmpMark(i) : state.harm ? (state.reveal?`<span class="ans${same(c,o)?" hit":""}">原曲 ${esc(sym(o))}</span>`:esc(c.tech||"")) : (mod_?`<s>${esc(sym(o))}</s> ${esc(c.tech||"")}`:"")}</span>
         <span class="chord">${esc(sym(c))}<i class="dot ${v}"></i></span>${state.roman?`<span class="rom">${c.root?esc(analyze(c,keyAt(c.s),state.chords[i+1]).roman):"&nbsp;"}</span>`:""}
       </button>`;
     });
     html+=L.svg()+`</div>`;
   }
   $("#sheet").innerHTML=html;
+  renderPlans();
   $("#summary").innerHTML = state.harm ? `<span>コードを置いた枠 <b>${changed}</b> / ${n}</span>
     <span class="pill good">○ ${cnt.good}</span><span class="pill ok">△ ${cnt.ok}</span><span class="pill bad">✕ ${cnt.bad}</span>
     <label class="chk"><input type="checkbox" id="revealOn" ${state.reveal?"checked":""}>原曲のコードを見る</label>
     <label class="chk"><input type="checkbox" id="romanOn" ${state.roman?"checked":""}>度数を表示</label>
     ${isMinor() || keyOfCell(state.sel).minor ? `<label class="chk"><input type="checkbox" id="laOn" ${state.laMinor?"checked":""}>短調はラから読む</label>` : ""}
-    ${state.reveal?`<span>原曲と同じ：<b>${match}</b> 枠、同じ機能：<b>${fnMatch}</b> 枠（違っていても、合っていれば正解です）</span>`:""}` :
+    ${state.reveal&&cmpPlan==null?`<span>原曲と同じ：<b>${match}</b> 枠、同じ機能：<b>${fnMatch}</b> 枠（違っていても、合っていれば正解です）</span>`:""}` :
     `<span>置き換え <b>${changed}</b> / ${n} か所</span>
     <span class="pill good">○ ${cnt.good}</span><span class="pill ok">△ ${cnt.ok}</span><span class="pill bad">✕ ${cnt.bad}</span>
     <span>${cnt.bad? "赤い点の枠は、骨格の音（強拍や長い音）がコードとぶつかっています。":"骨格の音がぶつかっている枠はありません。"}</span>
