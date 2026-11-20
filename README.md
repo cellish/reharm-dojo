@@ -72,7 +72,9 @@ Copyright (c) 2026 jun. All rights reserved.
 - `test/`：理論部分のテスト（`node --test`）
 - `tools/single-file.py`：1つの HTML にまとめる道具（VexFlow は CDN から読み込む形になります）
 - `tools/smoke.py`：ブラウザで全曲・全ステップを開いて試す確認（Playwright が必要）
-- `CLAUDE.md`、`docs/PLAN.md`：Claude で作業するときの手引きと、残りの作業の計画
+- `CLAUDE.md`：Claude で作業するときの手引き
+- `docs/PLAN.md`、`PROGRESS.md`：設計と計画、作業の記録と次の作業
+- `docs/INVENTORY.md`：中身の一覧（道場シリーズの共通部品を検討するため）
 
 ## English
 
