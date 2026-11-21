@@ -205,8 +205,12 @@ function techniques(i){
   bassOptions(i,K).forEach(x=>add("bass", x.c, x.name));
   // 同じコードが続く所を動かす（クリシェ）: one proposal covers the whole run of equal chords
   if(u.root && !u.bass){
-    const U=state.chords; let a=i, b=i; while(a>0 && same(U[a-1],u)) a--; while(b<U.length-1 && same(U[b+1],u)) b++;
-    const n=b-a+1, after=U[b+1], toIV = after && after.root && mod(rootPc(after.root)-rootPc(u.root))===5;
+    // the run stays inside one phrase: a cadence's I and the next phrase's opening I are not one held chord,
+    // and a line that ends a phrase does not lead into the next phrase (it would weaken the cadence)
+    const U=state.chords; let a=i, b=i;
+    while(a>0 && same(U[a-1],u) && !phraseStartsAt(U[a].s)) a--;
+    while(b<U.length-1 && same(U[b+1],u) && !phraseStartsAt(U[b+1].s)) b++;
+    const n=b-a+1, after=U[b+1], toIV = after && after.root && !phraseStartsAt(after.s) && mod(rootPc(after.root)-rootPc(u.root))===5;
     const lines = ["","maj7","6","add9"].includes(u.q) ? [
         toIV ? [["","maj7","7"], "根音から半音ずつ下がる線で、次のコードへ", true] : [["","maj7","6","maj7"], "根音から下がって戻る線"],
         toIV ? [["","aug","6","7"], "5度から半音ずつ上がる線で、次のコードへ"] : [["","aug","6","aug"], "5度から上がって戻る線"] ]

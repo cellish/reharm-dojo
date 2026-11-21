@@ -21,7 +21,8 @@ test("the course covers the four beginner songs, both modes", () => {
   for (const id of songs) for (const m of ["reharm", "harm"]) {
     const ts = run(`COURSES.${id}.${m}`), flow = run(`CFLOW.${m}`);
     assert.equal(new Set(ts.map(t => t.id)).size, ts.length, `${id} ${m}: task ids are unique`);
-    for (const s of flow) assert.ok(ts.some(t => t.step === s), `${id} ${m}: step ${s} has a task`);
+    // every step has a task, except a cliché step in a song with no chord held inside a phrase
+    for (const s of flow) if (s !== "cliche") assert.ok(ts.some(t => t.step === s), `${id} ${m}: step ${s} has a task`);
     for (const t of ts) assert.ok(flow.includes(t.step), `${id} ${m} ${t.id}: unknown step ${t.step}`);
   }
 });

@@ -82,6 +82,8 @@ function playCourse(cells){
   playRange(Math.max(0,from), to<0?cells.length:to, cells, "ccmp");
 }
 // {n:E} → a note name and {c:G7} → a chord symbol in the chosen key (the data is written in the C frame)
+// a step with no task in a song (e.g. no chord held for two cells inside one phrase, so no cliché)
+const CEMPTY = { cliche:"この曲には、同じコードが2枠以上続く所が、1つのフレーズの中にありません。クリシェは使わずに進みます。" };
 const sayText = s => String(s||"").replace(/\{n:([^}]+)\}/g, (m,x)=>droot(x)).replace(/\{c:([^}]+)\}/g, (m,x)=>sym(parseChord(x)));
 const COURSE_PLAY = new Set(["ccmp","corig","orig","all"]);
 // apply a pick to a copy of the cells (to sound a clashing example without placing it)
@@ -115,6 +117,7 @@ function courseHtml(){
     return h;
   }
   const ts=stepTasks(id), t=curTask();
+  if(!ts.length) h+=`<p class="hint">${glossed(CEMPTY[id]||"この曲には、このステップのお題がありません。")}「次へ」で先へ進みます。</p>`;
   if(ts.length>1 || (ts.length===1 && ts[0].bar)) h+=`<div class="ctasks">${ts.map((x,k)=>`<button class="chip${x===t?" on":""}${d.has(x.id)?" done":""}" data-ct="${x.id}">お題 ${k+1}${d.has(x.id)?" ✓":""}</button>`).join("")}</div>`;
   if(t) h+=courseTaskHtml(t, i);
   if(id==="prim") h+=fillBtnHtml();   // shown whatever the task's state, so the later steps can start from full cells

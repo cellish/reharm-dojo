@@ -96,9 +96,24 @@ test("a II–V proposal divides the cell and one undo step restores it", () => {
   assert.equal(run(`JSON.stringify(state.chords)`), before);
 });
 
-test("a cliché that leads to IV arrives on the seventh chord", () => {
+test("a cliché that leads to IV inside a phrase arrives on the seventh chord", () => {
+  // twinkle's melody with I held from bar 1 into bar 2 and IV on bar 2, beat 3 (all in the first phrase)
+  run(`SONGS.ptest={...SONGS.twinkle, chords:"C C | C F | F C | G7 C | C F | C G7 | C F | C G7 | C C | F C | F C | G7 C"}; null`);
+  load("ptest");
+  const lines = run(`techniques(0).filter(x=>x.tech==="cliche").map(x=>x.cells.map(c=>sym(c.c)))`);
+  run("delete SONGS.ptest; null");
+  assert.ok(lines.some(l => l.join(",") === "C,C7"), JSON.stringify(lines));
+});
+
+test("a cliché stays inside one phrase", () => {
+  // twinkle: the C ending phrase 1 (bar 4) and the C opening phrase 2 (bar 5) are not one held chord
+  load("twinkle");
+  assert.deepEqual(proposals(cellAt(14), "cliche"), []);
+  // jingle: bars 1-4 hold C to the end of the phrase; the line does not lead into the F of the next phrase
   load("jingle");
-  assert.deepEqual(proposals(0, "cliche")[0].split(">").slice(-2), ["Cmaj7", "C7"]);
+  const lines = proposals(0, "cliche");
+  assert.ok(lines.length > 0);
+  assert.ok(lines.every(l => !l.endsWith("C7")), JSON.stringify(lines));
 });
 
 test("solf reads syllables from the tonic, or from ラ in minor when chosen", () => {
