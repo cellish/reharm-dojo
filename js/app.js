@@ -129,7 +129,12 @@ function slotFromEvent(e){
 $("#sheet").onclick=e=>{ const i=slotFromEvent(e); if(i<0) return; selectCell(i); };
 $("#sheet").ondblclick=e=>{ if(slotFromEvent(e)>=0) previewSel(); };
 let lastBps=0;
-if(window.ResizeObserver) new ResizeObserver(()=>{ const b=barsPerSystem(); if(lastBps && b!==lastBps) render(); lastBps=b; }).observe($("#sheet"));
+// Re-render on the next frame, not inside the callback: render() changes #sheet's size, and doing that while
+// the observer delivers makes the browser raise "ResizeObserver loop completed with undelivered notifications"
+// (an error event that hosts such as Claude's preview pane report as uncaught).
+let roFrame=0;
+if(window.ResizeObserver) new ResizeObserver(()=>{ if(roFrame) return;
+  roFrame=requestAnimationFrame(()=>{ roFrame=0; const b=barsPerSystem(); if(lastBps && b!==lastBps) render(); lastBps=b; }); }).observe($("#sheet"));
 $("#playAll").onclick=()=>{ if(play&&play.mode==="all") stop(); else playRange(0,state.chords.length,state.chords,"all"); };
 document.querySelectorAll(".modesw button").forEach(b=>b.onclick=()=>{ const h=b.dataset.mode==="harm"; if(h===state.harm) return; stop(); state.harm=h; state.reveal=false; $("#resetConfirm").hidden=true; store.set("rehamo:harm",state.harm); restoreTab(); applyHarmUi(); loadSong(state.songId); });
 function applyHarmUi(){

@@ -29,6 +29,13 @@
 
 ## 作業の記録（新しい順）
 
+### 2026-11-21：ResizeObserver のエラーを直した
+- 利用者の報告：Claude の右の画面で開くと `ResizeObserver loop completed with undelivered notifications` が出る。
+- 原因：`js/app.js` の ResizeObserver が、通知の中で `render()` を呼んで `#sheet` の大きさを変えていた。ブラウザはこれを error として知らせ、Claude の画面はそれを捕まえていないエラーとして出す。
+- 直し方：描き直しを次のフレーム（`requestAnimationFrame`）に回した。
+- 確かめたこと：画面の幅を 1280 → 480 → 1280px と変えて error を数えた。直す前は4回、直したあとは0回。
+- 最新版を Mac の `music-dojo/reharm-dojo` に置く決まりを `CLAUDE.md` に書いた。
+
 ### 2026-11-21：入門コースの実装（PLAN 5. の L1〜L4）
 - 実装メモ
   - **データ**：`js/songs.js` の末尾に `COURSES` を足した（4曲 × 2つのモード）。
