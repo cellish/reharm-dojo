@@ -76,13 +76,14 @@ function goCStep(s){
   cmem[cstepKey()]=s; store.set(cstepKey(), s); cmsg=null;
   openTask(curTask()); const el=$("#insp"); if(el) el.scrollTop=0; render();
 }
-// play the four bars around the selected cell: the original, then the given cells
+// play the four bars around the selected cell once, with the given cells (the score marks where it is)
 function playCourse(cells){
-  const {b0,b1}=cmpRange(), ou=origUnits();
-  const span = U => { const from=U.findIndex(x=>x.s+x.l>b0+1e-6), to=U.findIndex(x=>x.s>=b1-1e-6); return [Math.max(0,from), to<0?U.length:to]; };
-  const [a,b]=span(ou); playRange(a, b, ou, "corig");
-  if(play) play.after = () => { const [c,d]=span(cells); playRange(c, d, cells, "ccmp"); };
+  const {b0,b1}=cmpRange(), from=cells.findIndex(x=>x.s+x.l>b0+1e-6), to=cells.findIndex(x=>x.s>=b1-1e-6);
+  playRange(Math.max(0,from), to<0?cells.length:to, cells, "ccmp");
 }
+// {n:E} → a note name and {c:G7} → a chord symbol in the chosen key (the data is written in the C frame)
+const sayText = s => String(s||"").replace(/\{n:([^}]+)\}/g, (m,x)=>droot(x)).replace(/\{c:([^}]+)\}/g, (m,x)=>sym(parseChord(x)));
+const COURSE_PLAY = new Set(["ccmp","corig","orig","all"]);
 // apply a pick to a copy of the cells (to sound a clashing example without placing it)
 function applyToCopy(it, i){
   const U=JSON.parse(JSON.stringify(state.chords));
@@ -118,6 +119,7 @@ function courseHtml(){
   if(t) h+=courseTaskHtml(t, i);
   if(id==="prim") h+=fillBtnHtml();   // shown whatever the task's state, so the later steps can start from full cells
   const pv=cMove(-1), nx=cMove(1);
+  h+=`<div class="gbtns"><button class="btn small" id="cStop" ${play&&COURSE_PLAY.has(play.mode)?"":"hidden"}>■ 再生を止める</button></div>`;
   h+=`<div class="gnav"><button class="btn" id="cPrev" ${pv?"":"disabled"}>← 前へ${pv?`<small>（${esc(pv.label)}）</small>`:""}</button><span class="sp"></span>
     <button class="btn primary" id="cNext" ${nx?"":"disabled"}>次へ →${nx?`<small>（${esc(nx.label)}）</small>`:""}</button></div>
     <div class="creset"><button class="linkbtn" id="cReset">入門の記録を消す</button>
@@ -140,16 +142,16 @@ function courseTaskHtml(t, i){
     return `<p class="hint">${glossed("フレーズの終わり方を聴き比べます。楽譜で光っている2か所です。")}</p>
       <div class="cspots">${t.spots.map((s,k)=>`<div class="gitem"><b>${s.bar}小節目</b>
         <div class="gbtns"><button class="btn small" data-hear="${k}">▶ 聴く</button><button class="btn small" data-end="${k}">こちらが終わった感じ</button></div></div>`).join("")}</div>
-      ${done?`<p class="cmsg good">✓ ${glossed(t.say)}</p>`:cmsgHtml()}`;
+      ${done?`<p class="cmsg good">✓ ${glossed(sayText(t.say))}</p>`:cmsgHtml()}`;
   }
-  if(t.step==="rhythm") return `<p class="hint">${glossed(t.say)}</p><p class="hint">入門では、はじめから原曲と同じ枠にしてあります。</p>`;
+  if(t.step==="rhythm") return `<p class="hint">${glossed(sayText(t.say))}</p><p class="hint">入門では、はじめから原曲と同じ枠にしてあります。</p>`;
   if(t.step==="review") return reviewHtml();
   if(t.step==="flow") return flowTaskHtml(i);
   const ti=taskCell(t);
   if(ti<0) return `<p class="hint">この枠の区切りが原曲と違うので、このお題はできません。「次へ」で先へ進んでください。</p>`;
   const marks=courseMarks();
   if(!marks.has(i)) return offTaskHtml(t, i);
-  let h=`<p class="hint"><b>${slotName(ti)}</b>：${glossed(t.say)}</p>`;
+  let h=`<p class="hint"><b>${slotName(ti)}</b>：${glossed(sayText(t.say))}</p>`;
   if(done){
     h+=`<p class="cmsg good">✓ このお題は済みました。いまのコード：${esc(sym(state.chords[ti]))}</p>${cmsgHtml()}
       <div class="gbtns"><button class="btn small" id="cRedo">このお題をもう一度</button></div>
@@ -202,7 +204,7 @@ function reviewHtml(){
   const bads=state.chords.map((u,k)=>k).filter(k=>state.chords[k].root && verdict(rolesFor(state.chords[k],k))==="bad");
   return `<p class="hint">変えたのは ${n} 枠のうち ${changed} 枠です。原曲と、いまの案を通して聴き比べましょう。</p>
     ${bads.length?`<ul class="issues">${bads.map(k=>`<li class="bad"><button data-go="${k}">${esc(slotName(k))}：骨格の音が ${esc(sym(state.chords[k]))} とぶつかっています。</button></li>`).join("")}</ul>`:""}
-    <div class="gbtns"><button class="btn small" id="cHearO">▶ 原曲を聴く</button><button class="btn small" id="cHearN">▶ いまの案を聴く</button></div>`;
+    <div class="gbtns"><button class="btn small" id="cHearO">${play&&play.mode==="orig"?"■ 停止":"▶ 原曲を聴く"}</button><button class="btn small" id="cHearN">${play&&play.mode==="all"?"■ 停止":"▶ いまの案を聴く"}</button></div>`;
 }
 
 function bindCourseSwitch(el){
@@ -246,6 +248,10 @@ function bindCourse(el){
   el.querySelectorAll("[data-oc]").forEach(b=>b.onclick=()=>{ const it=stepList(t.step==="flow"?"flow":t.step, i)[+b.dataset.oc];
     placeEntry(t.step==="flow"?{step:"prim"}:t, it, i); previewSel(); });
   const bt=$("#cBackTask"); if(bt) bt.onclick=()=>{ openTask(t); render(); };
+  const ho=$("#cHearO"), hn=$("#cHearN");
+  if(ho) ho.onclick=()=>{ if(play&&play.mode==="orig") stop(); else { const ou=origUnits(); playRange(0,ou.length,ou,"orig"); } };
+  if(hn) hn.onclick=()=>{ if(play&&play.mode==="all") stop(); else playRange(0,state.chords.length,state.chords,"all"); };
+  const cst=$("#cStop"); if(cst) cst.onclick=()=>stop();
   if(ti<0) return;
   const cneed=$("#cNeed"); if(cneed) cneed.onclick=()=>{ setChord(ti, parseChord(t.need), ""); };
   const cb=$("#cBack"); if(cb) cb.onclick=()=>{ if(state.harm) setChord(ti, origAt(ti), "");
@@ -262,20 +268,17 @@ function bindCourse(el){
       const U=applyToCopy(r.it, ti); const {b0,b1}=cmpRange();
       const from=Math.max(0,U.findIndex(x=>x.s+x.l>b0+1e-6)), to=U.findIndex(x=>x.s>=b1-1e-6);
       playRange(from, to<0?U.length:to, U, "ccmp");
-      cmsg={kind:"bad", text:`✕ ${entryLabel(r.it, ti)}：${r.p.why||"骨格の音とぶつかります。"}（楽譜のコードは変えていません）`};
+      cmsg={kind:"bad", text:`✕ ${entryLabel(r.it, ti)}：${sayText(r.p.why)||"骨格の音とぶつかります。"}（楽譜のコードは変えていません。いま鳴らしています）`};
       renderInsp(); return;
     }
     const label=entryLabel(r.it, ti);
     placeEntry(t, r.it, ti); markDone(t.id);
-    cmsg={kind:"good", text:`${label} を置きました。原曲 → いまのコードの順に、前後を聴き比べます。`};
+    cmsg={kind:"good", text:`${label} を置きました。前後の小節を鳴らします。原曲と比べるときは、上の「聴き比べ」の「▶ 原曲」を押します。`};
     state.sel=ti; render(); playCourse(state.chords); });
   const ce=$("#cEmpty"); if(ce) ce.onclick=()=>{ const k=fillOrder().find(j=>j!==i && !state.chords[j].root); if(k!=null) selectCell(k); };
   const cf=$("#cFill"); if(cf) cf.onclick=()=>{
     state.chords.forEach((u,k)=>{ if(u.root) return; const o=origAt(k); state.chords[k]={s:u.s, l:u.l, root:o.root, q:o.q, ...(o.bass?{bass:o.bass}:{}), tech:"原曲"}; });
     save(); render(); };
-  const ho=$("#cHearO"), hn=$("#cHearN");
-  if(ho) ho.onclick=()=>{ if(play&&play.mode==="orig") stop(); else { const ou=origUnits(); playRange(0,ou.length,ou,"orig"); } };
-  if(hn) hn.onclick=()=>{ if(play&&play.mode==="all") stop(); else playRange(0,state.chords.length,state.chords,"all"); };
 }
 // forget this song's course progress in the open mode (the chords are left alone: Undo and the plans cover those)
 function resetCourse(){
