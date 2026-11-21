@@ -387,3 +387,8 @@ h2{font-size:13px;font-weight:700;margin:0 0 8px;letter-spacing:.04em;color:var(
 .cbest{color:var(--ct)}
 .cbad{color:var(--nc)}
 .course .cspots .gitem{align-items:center}
+/* undo / redo: the hover hint sits on a wrapper, since a disabled button gets no pointer events */
+.tipwrap{display:inline-flex}
+.tipwrap .btn:disabled{pointer-events:none}
+.creset{margin-top:10px;font-size:12px}
+.creset .linkbtn{background:none;border:0;padding:0;color:var(--ink-2);text-decoration:underline;cursor:pointer;font:inherit}

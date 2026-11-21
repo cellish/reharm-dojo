@@ -149,14 +149,16 @@ function applyHarmUi(){
 // unavailable, store.get gives null and the box simply shows on every visit.
 const INTRO_REHARM = ["曲を選んで「全体を再生」で聴きます。", "楽譜の上のコード名（枠）を押して選びます。",
   "右の「ガイド」の提案を選ぶと、コードが置き換わって音が鳴ります。音符の色と下の数字で、メロディとの相性がわかります。",
-  "気に入らなければ「元に戻す」（Ctrl+Z）。ステップを進めると、手法が少しずつ増えます。"];
+  `気に入らなければ「元に戻す」（${/Mac|iPhone|iPad/.test(navigator.platform||navigator.userAgent)?"⌘Z":"Ctrl+Z"}）。ステップを進めると、手法が少しずつ増えます。`];
 const INTRO_HARM = ["曲を選んで「全体を再生」で旋律を聴きます。", "右の「ガイド」のステップ1から、順にコードを決めていきます。",
   "コードを置くと音符に色が付き、合っているかどうかがわかります。", "全部置けたら「原曲のコードを見る」で見比べます。"];
-function showIntro(on){
-  $("#intro").hidden=!on; $("#helpBtn").setAttribute("aria-expanded", String(on)); store.set("rehamo:intro", !on);
-}
-$("#helpBtn").onclick=()=>showIntro($("#intro").hidden);
-$("#introClose").onclick=()=>{ showIntro(false); $("#helpBtn").focus(); };
+function showIntro(on){ $("#intro").hidden=!on; store.set("rehamo:intro", !on); }
+$("#introClose").onclick=()=>showIntro(false);
+// Undo / redo shortcuts, shown on hover. The title sits on a wrapper because a disabled button shows no tooltip.
+// Macs use the Command key (the handler below accepts Ctrl or Command on any system).
+const MOD = /Mac|iPhone|iPad/.test(navigator.platform||navigator.userAgent) ? "⌘" : "Ctrl+";
+$("#undoTip").title=`元に戻す：直前の操作を取り消します（${MOD}Z）`;
+$("#redoTip").title=`やり直す：元に戻した操作を、もう一度行います（${MOD}Shift+Z）`;
 $("#summary").addEventListener("change",e=>{
   if(e.target.id==="revealOn"){ state.reveal=e.target.checked; applyHarmUi(); render(); }
   if(e.target.id==="laOn"){ state.laMinor=e.target.checked; store.set("rehamo:la", state.laMinor); render(); }
@@ -332,7 +334,7 @@ $("#quickIn").addEventListener("keydown", e=>{
 });
 
 restoreTab(); applyHarmUi();
-if(!store.get("rehamo:intro")){ $("#intro").hidden=false; $("#helpBtn").setAttribute("aria-expanded","true"); }
+if(!store.get("rehamo:intro")) $("#intro").hidden=false;
 const last=store.get("rehamo:last");
 loadSong(SONGS[last]?last:"twinkle");
 vfWaitFonts();   // after loadSong: its re-render needs a song in place

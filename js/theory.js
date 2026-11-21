@@ -158,6 +158,12 @@ const dimTo  = X => ({root:upIv(X.root,6,11), q:"dim7"});
 // Every proposal for cell i, based on the chord that is there now (the original chord if the cell is empty).
 // Items: {tech, c, name} or, for proposals that divide the cell in two, {tech, split:[first, second], name}
 // where a null half keeps the current chord.
+// a phrase begins at beat b (the song's phrase lengths, else 4 bars each; the same split as the guide's phrases())
+function phraseStartsAt(b){
+  const lens = song.phrases || Array.from({length:Math.ceil(song.nbars/4)}, (x,k)=>Math.min(4, song.nbars-k*4));
+  let t=0; for(const n of lens){ if(Math.abs(t-b)<1e-6) return true; t+=n*song.bpb; }
+  return false;
+}
 function techniques(i){
   const u=state.chords[i], base=(u&&u.root)?u:origAt(i), K=keyOfCell(i), next=state.chords[i+1], prev=state.chords[i-1];
   if(!base || !base.root) return [];
@@ -191,7 +197,8 @@ function techniques(i){
   if(A.kind==="dia" && A.fn){
     const afterD = prev && prev.root && analyze(prev,keyAt(prev.s)).fn==="D";
     M.fn.forEach((x,j)=>{ if(x!==A.fn || j===A.d) return; const c=C(...M.dia[j]);
-      const decept = A.d===0 && j===5 && afterD;
+      // a V that ends the previous phrase is a half cadence: the next phrase starting on VIm is not a deceptive cadence
+      const decept = A.d===0 && j===5 && afterD && !phraseStartsAt(u.s);
       add("func", c, decept ? `偽終止（V → ${romanOf(c,K)}）` : `${FUNC_NAME[A.fn]}の仲間（${romanOf(c,K)}）`); });
   }
   // ベースを動かす

@@ -98,8 +98,8 @@ function placeEntry(t, it, i){
 function courseSwitchHtml(){
   const ok=!!courseData(), on=courseOn();
   return `<div class="cswitch" role="group" aria-label="ガイドの種類">
-    <button class="btn small${on?"":" primary"}" data-course="0" aria-pressed="${!on}">ふつう</button>
     <button class="btn small${on?" primary":""}" data-course="1" aria-pressed="${on}" ${ok?"":"disabled"}>入門</button>
+    <button class="btn small${on?"":" primary"}" data-course="0" aria-pressed="${!on}">ふつう</button>
     ${ok?"":`<span class="hint">入門コースは、入門の4曲で使えます。</span>`}</div>`;
 }
 function courseHtml(){
@@ -117,8 +117,21 @@ function courseHtml(){
   if(ts.length>1 || (ts.length===1 && ts[0].bar)) h+=`<div class="ctasks">${ts.map((x,k)=>`<button class="chip${x===t?" on":""}${d.has(x.id)?" done":""}" data-ct="${x.id}">お題 ${k+1}${d.has(x.id)?" ✓":""}</button>`).join("")}</div>`;
   if(t) h+=courseTaskHtml(t, i);
   if(id==="prim") h+=fillBtnHtml();   // shown whatever the task's state, so the later steps can start from full cells
-  h+=`<div class="gnav"><button class="btn" id="cPrev" ${step===1?"disabled":""}>← 前へ</button><span class="sp"></span><button class="btn primary" id="cNext" ${step===n?"disabled":""}>次へ →</button></div></div>`;
+  const pv=cMove(-1), nx=cMove(1);
+  h+=`<div class="gnav"><button class="btn" id="cPrev" ${pv?"":"disabled"}>← 前へ${pv?`<small>（${esc(pv.label)}）</small>`:""}</button><span class="sp"></span>
+    <button class="btn primary" id="cNext" ${nx?"":"disabled"}>次へ →${nx?`<small>（${esc(nx.label)}）</small>`:""}</button></div>
+    <div class="creset"><button class="linkbtn" id="cReset">入門の記録を消す</button>
+      <span class="confirm" id="cResetConfirm" hidden>この曲の入門の記録（済んだお題と、開いていたステップ）を消しますか？楽譜のコードはそのままです。
+        <button class="btn small warn" id="cResetYes">消す</button><button class="btn small" id="cResetNo">やめる</button></span></div></div>`;
   return h;
+}
+// where "次へ" / "前へ" go: the next task of this step, else the next step (its first task, or its last going back)
+function cMove(dir){
+  const flow=CFLOW[cMode()], step=getCStep(), ts=stepTasks(cStepId()), t=curTask(), k=ts.indexOf(t);
+  if(k+dir>=0 && k+dir<ts.length) return {task:ts[k+dir], step, label:`お題 ${k+dir+1}`};
+  const s=step+dir; if(s<1 || s>flow.length) return null;
+  const ns=stepTasks(flow[s-1]), nt=dir>0 ? ns[0] : ns[ns.length-1];
+  return {task:nt, step:s, label:`ステップ ${s}`};
 }
 function cmsgHtml(){ return cmsg ? `<p class="cmsg ${cmsg.kind}">${esc(cmsg.text)}</p>` : ""; }
 function courseTaskHtml(t, i){
@@ -133,27 +146,28 @@ function courseTaskHtml(t, i){
   if(t.step==="review") return reviewHtml();
   if(t.step==="flow") return flowTaskHtml(i);
   const ti=taskCell(t);
-  if(ti<0) return `<p class="hint">この枠の区切りが原曲と違うので、このお題はできません。「とばす」で次へ進んでください。</p>${skipBtn(t)}`;
+  if(ti<0) return `<p class="hint">この枠の区切りが原曲と違うので、このお題はできません。「次へ」で先へ進んでください。</p>`;
   const marks=courseMarks();
   if(!marks.has(i)) return offTaskHtml(t, i);
   let h=`<p class="hint"><b>${slotName(ti)}</b>：${glossed(t.say)}</p>`;
   if(done){
     h+=`<p class="cmsg good">✓ このお題は済みました。いまのコード：${esc(sym(state.chords[ti]))}</p>${cmsgHtml()}
-      <div class="gbtns">${nextTaskBtn(t)}<button class="btn small" id="cRedo">やり直す</button></div>`;
+      <div class="gbtns"><button class="btn small" id="cRedo">このお題をもう一度</button></div>
+      <p class="hint">「次へ」で、次のお題に進みます。</p>`;
     return h;
   }
   if(t.need && !same(state.chords[ti], parseChord(t.need))){
     const nc=parseChord(t.need);
     return h+`<p class="hint">このお題は、この枠が ${esc(sym(nc))} のときにできます。</p>
-      <div class="gbtns"><button class="btn small primary" id="cNeed">この枠を ${esc(sym(nc))} にする</button>${skipBtn(t)}</div>`;
+      <div class="gbtns"><button class="btn small primary" id="cNeed">この枠を ${esc(sym(nc))} にする</button></div>`;
   }
   const rp=resolvePicks(t, ti);
   if(rp.some(r=>!r.it)){
     return h+`<p class="hint">この枠のコードが変わっているので、お題の候補が出せません。原曲のコードに戻すと、このお題ができます。</p>
-      <div class="gbtns"><button class="btn small primary" id="cBack">原曲のコードに戻す</button>${skipBtn(t)}</div>`;
+      <div class="gbtns"><button class="btn small primary" id="cBack">原曲のコードに戻す</button></div>`;
   }
   h+=`<div class="cands revopts">${rp.map((r,k)=>courseCand(r, ti, k)).join("")}</div>${cmsgHtml()}
-    <div class="gbtns">${skipBtn(t)}</div>`;
+    <p class="hint">済ませなくても「次へ」で先へ進めます。</p>`;
   return h;
 }
 function courseCand(r, i, k){
@@ -161,11 +175,6 @@ function courseCand(r, i, k){
   const it=r.it, attrs=`data-cp="${k}"`;
   return TECH[it.tech] ? candItem(it, i, attrs).replace(/<\/button>$/, mark+"</button>")
                        : candButton(it.c, i, attrs, `<span class="oname">${esc(it.name)}</span>${mark}`);
-}
-const skipBtn = t => `<button class="btn small" data-skip="${t.id}">このお題はとばす</button>`;
-function nextTaskBtn(t){
-  const ts=stepTasks(t.step), k=ts.indexOf(t), d=doneSet(), nx=ts.slice(k+1).concat(ts.slice(0,k)).find(x=>!d.has(x.id));
-  return nx ? `<button class="btn small primary" data-ct="${nx.id}">次のお題へ</button>` : `<span class="hint good">このステップのお題は全部済みました。「次へ」で進みます。</span>`;
 }
 function fillBtnHtml(){
   const empt=state.chords.filter(u=>!u.root).length;
@@ -207,15 +216,17 @@ function bindCourse(el){
   if(state.harm && !gridIsOrig() && state.chords.every(u=>!u.root)){ state.chords=emptyOrigGrid(); save(); openTask(t); render(); return; }
   const cg=$("#cGrid"); if(cg) cg.onclick=()=>{ newPlan(); state.chords=emptyOrigGrid(); save(); openTask(curTask()); render(); };
   el.querySelectorAll("[data-cs]").forEach(b=>b.onclick=()=>goCStep(+b.dataset.cs));
+  const move = m => { if(!m) return; if(m.step!==step){ cmem[cstepKey()]=m.step; store.set(cstepKey(), m.step); }
+    openTask(m.task); const pe=$("#insp"); if(pe) pe.scrollTop=0; render(); };
   const cp=$("#cPrev"), cn=$("#cNext");
-  if(cp) cp.onclick=()=>goCStep(step-1);
-  if(cn) cn.onclick=()=>goCStep(step+1);
+  if(cp) cp.onclick=()=>move(cMove(-1));
+  if(cn) cn.onclick=()=>move(cMove(1));
+  const crs=$("#cReset"), crc=$("#cResetConfirm");
+  if(crs) crs.onclick=()=>{ crc.hidden=false; crs.hidden=true; };
+  const cry=$("#cResetYes"), crn=$("#cResetNo");
+  if(crn) crn.onclick=()=>{ crc.hidden=true; crs.hidden=false; };
+  if(cry) cry.onclick=()=>{ resetCourse(); };
   el.querySelectorAll("[data-ct]").forEach(b=>b.onclick=()=>{ openTask(stepTasks(id).find(x=>x.id===b.dataset.ct)); render(); });
-  el.querySelectorAll("[data-skip]").forEach(b=>b.onclick=()=>{
-    const ts=stepTasks(id), k=ts.findIndex(x=>x.id===b.dataset.skip), d=doneSet();
-    const nx=ts.slice(k+1).concat(ts.slice(0,k)).find(x=>!d.has(x.id));
-    if(nx) openTask(nx); else if(step<CFLOW[cMode()].length) return goCStep(step+1);
-    render(); });
   el.querySelectorAll("[data-go]").forEach(b=>b.onclick=()=>selectCell(+b.dataset.go));
   if(!t) return;
   // steps that are done by being seen, or by their state
@@ -265,6 +276,13 @@ function bindCourse(el){
   const ho=$("#cHearO"), hn=$("#cHearN");
   if(ho) ho.onclick=()=>{ if(play&&play.mode==="orig") stop(); else { const ou=origUnits(); playRange(0,ou.length,ou,"orig"); } };
   if(hn) hn.onclick=()=>{ if(play&&play.mode==="all") stop(); else playRange(0,state.chords.length,state.chords,"all"); };
+}
+// forget this song's course progress in the open mode (the chords are left alone: Undo and the plans cover those)
+function resetCourse(){
+  try{ localStorage.removeItem(ctaskKey()); localStorage.removeItem(cstepKey()); }catch(e){}
+  delete cmem[ctaskKey()]; delete cmem[cstepKey()];
+  CFLOW[cMode()].forEach(id=>delete cpick[cstepKey()+":"+id]);
+  cmsg=null; openTask(curTask()); render();
 }
 function entryLabel(it, i){
   if(it.cells) return it.cells.map(x=>sym(x.c)).join(" → ");

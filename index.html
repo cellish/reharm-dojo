@@ -18,7 +18,6 @@
     <div class="tophead">
       <h1>リハモ道場 <span class="en">Reharm Dojo</span><small id="modeDesc">コードを置き換えて、メロディ音がそのコードの何度になるかを確かめる</small></h1>
       <div class="topbtns">
-      <button class="btn" id="helpBtn" aria-controls="intro" aria-expanded="false">使い方</button>
       <div class="modesw" role="group" aria-label="モード">
         <button data-mode="harm" aria-pressed="false"><b>伴奏付け</b><small>旋律だけからコードを付ける</small></button>
         <button data-mode="reharm" aria-pressed="true"><b>リハモ</b><small>原曲のコードを付け替える</small></button>
@@ -33,8 +32,8 @@
         <button class="btn" id="newSong">＋ 曲を入力</button>
         <button class="btn" id="editSong" hidden>この曲を編集</button>
         <span class="sp"></span>
-        <button class="btn" id="undoBtn" title="元に戻す（Ctrl+Z）" disabled>↶ 元に戻す</button>
-        <button class="btn" id="redoBtn" title="やり直す（Ctrl+Shift+Z）" disabled>↷ やり直す</button>
+        <span class="tipwrap" id="undoTip"><button class="btn" id="undoBtn" disabled>↶ 元に戻す</button></span>
+        <span class="tipwrap" id="redoTip"><button class="btn" id="redoBtn" disabled>↷ やり直す</button></span>
         <button class="btn warn" id="reset">すべて原曲に戻す</button>
         <span class="confirm" id="resetConfirm" hidden><span id="resetMsg">置き換えをすべて元に戻しますか？</span>
           <button class="btn warn" id="resetYes">戻す</button><button class="btn" id="resetNo">やめる</button></span>

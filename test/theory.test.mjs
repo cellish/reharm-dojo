@@ -121,3 +121,13 @@ test("phrase lengths are kept only when they are whole bars adding up to the son
   assert.equal(ph([12, 0]), null);                // an empty phrase
   assert.equal(ph("4 4 4"), null);                // not a list
 });
+
+test("V → VIm is a deceptive cadence inside a phrase, but not when the V ended the previous phrase", () => {
+  load("twinkle");
+  const names = beat => run(`techniques(${cellAt(beat)}).filter(x=>x.tech==="func").map(x=>x.name)`);
+  // bar 4: G7 → (C) in the middle of the first phrase
+  assert.ok(names(14).some(n => n.startsWith("偽終止")), "bar 4, beat 3");
+  // bar 9 begins a phrase; the G7 of bar 8 was a half cadence
+  assert.ok(!names(32).some(n => n.startsWith("偽終止")), "bar 9, beat 1");
+  assert.ok(names(32).some(n => n.includes("VIm7")), "VIm7 is still offered as a tonic substitute");
+});
