@@ -547,7 +547,7 @@ function renderInspBody(){
     <button role="tab" data-tab="guide" aria-selected="${state.tab==="guide"}">ガイド</button>
     <button role="tab" data-tab="cand" aria-selected="${state.tab==="cand"}">${state.harm?"コード候補":"置き換え候補"}</button>
     <button role="tab" data-tab="rev" aria-selected="${state.tab==="rev"}">着地点から</button></div>`;
-  const el=$("#insp"); el.innerHTML = tabs + (state.tab==="rev" ? revHtml() : state.tab==="guide" ? guideHtml() : candHtml(i));
+  const el=$("#insp"); el.innerHTML = tabs + (state.tab==="rev" ? revHtml() : state.tab==="guide" ? courseSwitchHtml()+(courseOn()?courseHtml():guideHtml()) : candHtml(i));
   el.querySelectorAll(".tabs button").forEach(b=>b.onclick=()=>{ state.tab=b.dataset.tab; store.set(tabKey(),state.tab); el.scrollTop=0; renderInsp(); });
   if(el.dataset.sel!==String(i)){ el.scrollTop=0; el.dataset.sel=i; }
   $("#hearHere").onclick=()=>{ if(play&&play.mode==="here") stop(); else playRange(i, state.chords.length, state.chords, "here"); };
@@ -561,7 +561,7 @@ function renderInspBody(){
   const scp=$("#selCmpP"); if(scp) scp.onclick=()=>{ if(play&&play.mode==="plancmp") stop(); else playCompare("plancmp"); };
   $("#splitBtn").onclick=()=>{ splitUnit(i); render(); };
   $("#mergeBtn").onclick=()=>{ mergeNext(i); render(); };
-  if(state.tab==="guide"){ bindGuide(el); return; }
+  if(state.tab==="guide"){ bindCourseSwitch(el); if(courseOn()) bindCourse(el); else bindGuide(el); return; }
   if(state.tab==="cand"){
     const groups=suggest(i);
     el.querySelectorAll(".tile").forEach(b=>{

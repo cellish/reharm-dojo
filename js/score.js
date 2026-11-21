@@ -214,9 +214,10 @@ function render(){
   const n=state.chords.length, bpb=song.bpb, nb=song.nbars, bps=barsPerSystem();
   $("#sheet").classList.toggle("narrow", isNarrow());
   const chainSet=new Set(rev.chain.map(e=>e.i));
-  const showBass = state.chords.some(u=>u.bass) || (!state.harm && state.tab==="guide" && rflow()==="bass");
+  const cOn = state.tab==="guide" && courseOn(), cMarks = cOn ? courseMarks() : new Set();
+  const showBass = state.chords.some(u=>u.bass) || (!state.harm && state.tab==="guide" && (cOn ? cStepId() : rflow())==="bass");
   BASS_Y = DEG_Y+17; HB = showBass ? DEG_Y+24 : H;
-  const gs = (!state.harm && state.tab==="guide") ? rflow() : null;
+  const gs = (!state.harm && state.tab==="guide" && !cOn) ? rflow() : null;
   const canSet = new Set(TECH[gs] ? state.chords.map((u,k)=>k).filter(k=>rStepUsable(gs,k)) : []);
   $("#legendCan").hidden = !canSet.size;
   let html="", cnt={good:0,ok:0,bad:0,none:0}, changed=0, match=0, fnMatch=0;
@@ -231,7 +232,7 @@ function render(){
       const c=state.chords[i], o=origAt(i), v=verdict(rolesFor(c,i));
       cnt[v]++; const mod_=isChanged(i); if(mod_) changed++; if(state.harm && same(c,o)) match++;
       else if(state.harm && state.reveal && c.root){ const K=keyAt(c.s), A=analyze(c,K); if(A.fn && A.fn===analyze(o,K).fn) fnMatch++; }
-      const cls = (canSet.has(i)?" can":"")+(i===state.sel?" sel":"")+(i===rev.target?" tgt":"")+(chainSet.has(i)?" chain":"")+(c.l<=1?" small":"");
+      const cls = (canSet.has(i)?" can":"")+(i===state.sel?" sel":"")+(i===rev.target?" tgt":"")+(chainSet.has(i)?" chain":"")+(cMarks.has(i)?" task":"")+(c.l<=1?" small":"");
       html+=`<button class="slot${cls}" data-i="${i}" aria-label="${slotName(i)} ${esc(sym(c))}">
         <span class="orig">${cmpPlan!=null ? cmpMark(i) : state.harm ? (state.reveal?`<span class="ans${same(c,o)?" hit":""}">原曲 ${esc(sym(o))}</span>`:esc(c.tech||"")) : (mod_?`<s>${esc(sym(o))}</s> ${esc(c.tech||"")}`:"")}</span>
         <span class="chord">${esc(sym(c))}<i class="dot ${v}"></i></span>${state.roman?`<span class="rom">${c.root?esc(analyze(c,keyAt(c.s),state.chords[i+1]).roman):"&nbsp;"}</span>`:""}

@@ -55,6 +55,7 @@ python3 tools/smoke.py      # 全曲・両モード・全ステップを開き�
 | `js/state.js` | `state`、保存、Undo（`save`、`histGo`）、枠の編集（`setChord`、`splitUnit`、`mergeNext`）。 |
 | `js/score.js` | 楽譜。VexFlow での描画 `vfSystem` と、全体の描き直し `render`。 |
 | `js/guide.js` | 右のパネル。選択中の枠のバー、候補、「着地点から」（旧称：逆算）、2つのガイド（`guideHtml`＝伴奏付け、`rGuideHtml`＝リハモ）。 |
+| `js/course.js` | 入門コース。お題（`COURSES`、`js/songs.js` の末尾）を、そのステップの候補の一覧から引いて出す（`resolvePicks`、`courseHtml`、`bindCourse`）。 |
 | `js/audio.js` | Web Audio での再生（`playRange`、`tone`）。 |
 | `js/app.js` | 曲のメニュー、曲の入力、キー操作、凡例の用語説明、起動。 |
 | `vendor/` | VexFlow 5.0.0（同梱。編集しない）。 |

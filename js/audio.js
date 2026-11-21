@@ -53,8 +53,8 @@ function playRange(from,to,chords,mode,startBeat,origin){
   play={bus,mode,raf:0, from,to,chords, start, end:b1, beat:()=>(ctx.currentTime-t0)/spb+b0};
   const tick=()=>{ if(!play) return; const beat=(ctx.currentTime-t0)/spb+b0;
     // repeat on the end beat; a short audition of a cell ("slot") always plays once
-    if(beat>=b1 && state.loop && mode!=="slot"){ replayBeats(play, start); return; }
-    if(beat>=b1){ play.bus.disconnect && setTimeout(()=>bus.disconnect(),600); play=null; markPlaying(-1); playButtons(); return; }
+    if(beat>=b1 && state.loop && !ONCE.has(mode)){ replayBeats(play, start); return; }
+    if(beat>=b1){ const after=play.after; setTimeout(()=>bus.disconnect(),600); play=null; markPlaying(-1); playButtons(); if(after) after(); return; }
     markPlaying(beat>=0 && !OTHER_CELLS.has(mode) ? unitAt(beat):-1); play.raf=requestAnimationFrame(tick); };
   play.raf=requestAnimationFrame(tick); playButtons();
 }
@@ -66,7 +66,9 @@ function replayBeats(p, startBeat){
   playRange(Math.max(0,from), to<0?U.length:to, U, p.mode, startBeat, p.start);
 }
 // modes that play cells other than the open plan's (the original, another plan): no position marks on the score
-const OTHER_CELLS = new Set(["orig","plan","plancmp"]);
+const OTHER_CELLS = new Set(["orig","plan","plancmp","corig"]);
+// modes that play once even when repeat is on: a cell's audition, and the course's original → new comparison
+const ONCE = new Set(["slot","corig","ccmp"]);
 let lastPlaying=-1;
 function markPlaying(i){
   if(i===lastPlaying) return; lastPlaying=i;

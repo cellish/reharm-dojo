@@ -65,6 +65,7 @@ Copyright (c) 2026 jun. All rights reserved.
 - `js/state.js`：状態の保存、元に戻す・やり直す、枠の編集
 - `js/score.js`：楽譜の描画
 - `js/guide.js`：右側のパネル（ガイド・候補・着地点から）
+- `js/course.js`：入門コース（入門の4曲で、枠と候補を絞ったお題を出すガイド）
 - `js/audio.js`：再生
 - `js/app.js`：曲のメニュー、曲の入力、キー操作
 - `vendor/`：VexFlow と、VexFlow・Bravura・Academico のライセンス文
