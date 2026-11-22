@@ -453,8 +453,9 @@ const RDESC = {
   bass:"コードはそのままに、ベースの音だけを変えます。分数コード C/E は「C のコードで、ベースは E」という意味です。転回形でベースをなめらかにつなぐ、ベースを1音ずつ下げる（上げる）、同じベースを保つ（ペダル）、V の代わりに IV/V の形を使う、が代表です。楽譜の下にベースラインが出ます。",
   cliche:"同じコードが2枠以上続く所で使います。コードの中の1音だけを半音ずつ動かすと、止まっていた響きに線が生まれます（クリシェ）。提案を選ぶと、続いている枠にまとめて入ります。",
   toward:"次のコードを着地点とみなして、そこへ向かうコードを置きます。次のコードの V7（セカンダリードミナント）や II が代表です。「II–V にする」「II–V に分ける」を選ぶと、枠が2つに分かれて両方入ります。「着地点から」タブで、着地点から手前へ組み立てることもできます。",
-  chrom:"V7 を裏コード（♭II7）に替えたり、ディミニッシュをはさんだりして、ベースを半音で動かします。",
+  chrom:"V7 を裏コード（♭II7）に替えたり、ディミニッシュや ♯IVm7(♭5) をはさんだりして、ベースを半音で動かします。",
   borrow:"同じ主音の短調（短調の曲なら長調）からコードを借りて、陰りや明るさを足します。IVm や ♭VII7 が定番です。",
+  cadence:"フレーズの終わり（V → I）の終わり方を替えます。IV → I（変格終止）は柔らかく、IVm6 → I は少し切なく、♭VII7 → I（バックドア）や ♭II7 → I（裏コード）はジャズらしく終わります。V → VIm（偽終止）は、終わると思わせて続けます。",
   review:"最後に見直します。変えすぎていないか、骨格の音のぶつかりが増えていないかを確かめ、原曲と聴き比べます。全部の枠を変える必要はありません。"
 };
 const rStepCands = (id,i) => techniques(i).filter(x=>x.tech===id);
@@ -496,7 +497,7 @@ function rGuideHtml(){
       <p class="hint">選んだ枠のバーの「聴き比べ」で、原曲といまのコードを聴き比べられます。気に入らない所は「原曲に戻す」か、Ctrl+Z で戻せます。</p>`;
   } else {
     const opts=rStepCands(id,i), usable=state.chords.map((u,k)=>k).filter(k=>rStepUsable(id,k));
-    const cnt=rStepCount(id), goal=["toward","chrom","cliche"].includes(id)?1:2;
+    const cnt=rStepCount(id), goal=["toward","chrom","cliche","cadence"].includes(id)?1:2;
     h+=`<div class="chainrow"><span>課題：この段階の手法を ${goal} か所で使ってみよう（いま ${cnt}）${cnt>=goal?" <b class='okmark'>✓ 達成</b>":""}</span></div>
       <h3 class="sub">${slotName(i)}（いま ${esc(sym(state.chords[i]))}・原曲 ${esc(sym(origAt(i)))}）の候補</h3>`;
     h+= opts.length ? `<div class="cands revopts">${opts.map((o,k)=>candItem(o,i,`data-rc="${k}"`)).join("")}</div>`

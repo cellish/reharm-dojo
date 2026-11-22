@@ -119,8 +119,9 @@ const TECH = {
   toward: {name:"次のコードへ向かう", short:"向かう", desc:"次のコードを一時的な I とみなし、その V7 や II を置く。枠を2つに分けて II–V にすることもできる。"},
   chrom:  {name:"半音で近づく", short:"半音", desc:"裏コード（♭II7）やディミニッシュで、ベースを半音で動かして次のコードへつなぐ。"},
   borrow: {name:"借りてくる", short:"借用", desc:"同じ主音の短調（短調の曲なら長調）からコードを借りて、陰りや明るさを足す。"},
+  cadence:{name:"終わり方を替える", short:"終止", desc:"フレーズの終わりの V → I を、変格終止（IV → I）、IVm6 → I、バックドア（♭VII7 → I）、裏コード（♭II7 → I）、偽終止（V → VIm）などに替えて、終わり方の味を比べる。"},
 };
-const TECH_ORDER = ["seventh","func","bass","cliche","toward","chrom","borrow"];
+const TECH_ORDER = ["seventh","func","bass","cliche","toward","chrom","borrow","cadence"];
 // labels saved on cells by earlier versions → technique id
 const TECH_ALIAS = {"4和音化":"seventh","4和音":"seventh","ダイアトニック代理":"func","分数コード（ベースを動かす）":"bass","セカンダリードミナント":"toward","リレイテッド II":"toward",
   "着地点へ":"toward","裏コード":"chrom","パッシング・ディミニッシュ":"chrom","同主短調からの借用":"borrow","同主長調からの借用":"borrow"};
@@ -164,6 +165,8 @@ function phraseStartsAt(b){
   let t=0; for(const n of lens){ if(Math.abs(t-b)<1e-6) return true; t+=n*song.bpb; }
   return false;
 }
+// a cell ends a phrase: it reaches the next phrase's first beat, or the end of the song
+const endsPhrase = u => phraseStartsAt(u.s+u.l) || Math.abs(u.s+u.l - song.nbars*song.bpb)<1e-6;
 function techniques(i){
   const u=state.chords[i], base=(u&&u.root)?u:origAt(i), K=keyOfCell(i), next=state.chords[i+1], prev=state.chords[i-1];
   if(!base || !base.root) return [];
@@ -172,6 +175,22 @@ function techniques(i){
   const add=(tech,c,name)=>{ const k=ckey(c); if(seen.has(k)) return; seen.add(k); out.push({tech,c,name}); };
   const addSplit=(tech,a,b,name)=>{ if(u.l<2) return; const k="s"+ckey(a||base)+">"+ckey(b||base); if(seen.has(k)) return; seen.add(k); out.push({tech, split:[a,b], name}); };
   const p=relPc(base,K);
+  // 終わり方を替える: made first, so at a cadence the same chords are not offered again under other techniques
+  const dia = (c,d) => { if(!c || !c.root) return false; const X=analyze(c,K); return X.kind==="dia" && X.d===d; };
+  if(dia(base,4) && dia(next,0) && endsPhrase(next)){
+    if(!mi){
+      add("cadence", C("F",""), "変格終止（IV → I）");
+      add("cadence", C("F","m6"), "IVm6 → I（同主短調から。柔らかく暗い終わり方）");
+      add("cadence", C("B♭","7"), "バックドア（♭VII7 → I）");
+      addSplit("cadence", C("F","m7"), C("B♭","7"), "バックドアの II–V（IVm7 – ♭VII7 → I）");
+    } else add("cadence", C("F","m"), "変格終止（IVm → Im）");
+    add("cadence", subOf(next), "裏コード（♭II7 → I）");
+  }
+  // a deceptive cadence on a phrase's last I, but never on the song's last chord
+  if(dia(base,0) && dia(prev,4) && endsPhrase(u) && i<state.chords.length-1){
+    const c = mi ? C("A♭","maj7") : C(...M.dia[5]);
+    add("cadence", c, `偽終止（V → ${romanOf(c,K)}）`);
+  }
   // 4和音にする
   if(base.q===""){
     if(A.fn==="D" && !(mi&&A.d===6)){ add("seventh",R("7"),"7th を足す"); add("seventh",R("7sus4"),"sus4 にする"); if(mi) add("seventh",R("7b9"),"♭9 を足す"); }
@@ -238,6 +257,12 @@ function techniques(i){
     if(rootPc(dimTo(next).root)!==rootPc(base.root)) add("chrom", dimTo(next), `パッシング・ディミニッシュ（${ns} へ半音上行）`);
   }
   if(isDomQ(base.q)) add("chrom", {root:upIv(base.root,4,6), q:"7"}, "この V7 の裏コード");
+  // IV → ♯IVm7(♭5) → I (or V): the bass rises by half steps; the root keeps IV's letter (F → F♯)
+  if(!mi && p===5 && next && next.root && [0,7].includes(mod(rootPc(next.root)-K.pc))){
+    const s4={root:upIv(base.root,0,1), q:"m7b5"}, ns=sym(next);
+    add("chrom", s4, `♯IVm7(♭5)（ベースが半音上がって、次の ${ns} へ）`);
+    addSplit("chrom", null, s4, `後半を ♯IVm7(♭5) に（IV → ♯IV → ${ns}）`);
+  }
   // 借りてくる
   if(A.fn){
     const b = !mi ? {T:[["E♭","maj7","♭IIImaj7"],["A♭","maj7","♭VImaj7"]], S:[["F","m6","IVm6"],["F","m7","IVm7"],["B♭","7","♭VII7"],["D","m7b5","IIm7(♭5)"],["A♭","maj7","♭VImaj7"]], D:[["G","7b9","V7(♭9)"],["B♭","7","♭VII7（バックドア）"]]}[A.fn]

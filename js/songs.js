@@ -110,6 +110,10 @@ const COURSES = {
         picks:[{c:"D7", best:true}, {c:"Am7>D7"}]},
       {id:"t2", step:"toward", bar:11, beat:3, say:"ここも次は {c:G7} です。枠を2つに分けて、II–V（{c:Am7}–{c:D7}）にします。",
         picks:[{c:"Am7>D7", best:true}, {c:"D7"}]},
+      {id:"x1", step:"chrom", bar:10, beat:1, say:"IV の {c:F} を ♯IVm7(♭5)（{c:F#m7b5}）に替えると、ベースが {n:F} → {n:F#} と半音で上がって、次の I へつながります。次の枠を {c:C/G} にしておくと、ベースが {n:G} まで上がり続けます。",
+        picks:[{c:"F#m7b5", best:true}, {c:"F>F#m7b5"}, {c:"Bdim7", bad:true, why:"{c:Bdim7} の {n:A♭} が、メロディの {n:A} と半音でぶつかります。"}]},
+      {id:"k1", step:"cadence", bar:4, beat:1, say:"1つ目のフレーズの終わり（V7 → I）の終わり方を替えます。IVm7 – ♭VII7（バックドア）は、ジャズらしく柔らかな終わり方です。",
+        picks:[{c:"Fm7>Bb7", best:true}, {c:"Fm6"}, {c:"Db7"}]},
       {id:"v1", step:"review"}
     ],
     harm:[
@@ -158,6 +162,10 @@ const COURSES = {
         picks:[{c:"C,Cmaj7", best:true}, {c:"C,Caug"}]},
       {id:"t1", step:"toward", bar:9, beat:3, say:"次の {c:G7} を着地点とみなして、その V7（{c:D7}）を置きます（セカンダリードミナント）。",
         picks:[{c:"D7", best:true}, {c:"Am7>D7"}]},
+      {id:"x1", step:"chrom", bar:12, beat:1, say:"次の V（{c:G}）へ、半音上の {c:Ab7} から下りて入ります（裏コード）。ベースが {n:Ab} → {n:G} と半音で下がります。",
+        picks:[{c:"Ab7", best:true}, {c:"F#dim7"}]},
+      {id:"k1", step:"cadence", bar:8, beat:1, say:"2つ目のフレーズの終わり（V7 → I）の終わり方を替えます。♭VII7 → I（バックドア）は、ジャズらしく柔らかな終わり方です。",
+        picks:[{c:"Bb7", best:true}, {c:"Fm6"}, {c:"F"}]},
       {id:"v1", step:"review"}
     ],
     harm:[
@@ -206,6 +214,10 @@ const COURSES = {
         picks:[{c:"D7", best:true}, {c:"Am7>D7"}]},
       {id:"t2", step:"toward", bar:12, beat:1, say:"次の {c:F} を着地点とみなして、その V7（{c:C7}）を置きます。",
         picks:[{c:"C7", best:true}, {c:"Gm7>C7"}]},
+      {id:"x1", step:"chrom", bar:14, beat:1, say:"{c:F} の後半を ♯IVm7(♭5)（{c:F#m7b5}）にすると、ベースが {n:F} → {n:F#} と半音で上がって、次の I へつながります。",
+        picks:[{c:"F>F#m7b5", best:true}, {c:"F#m7b5", bad:true, why:"枠ごと替えると、前半のメロディの {n:F} が {n:F#} と半音でぶつかります。"}]},
+      {id:"k1", step:"cadence", bar:15, beat:1, say:"曲の終わりの V7 → I を替えます。IVm6 → I は、少し切なく柔らかい終わり方です。",
+        picks:[{c:"Fm6", best:true}, {c:"Bb7"}, {c:"Db7"}]},
       {id:"v1", step:"review"}
     ],
     harm:[
@@ -254,6 +266,10 @@ const COURSES = {
         picks:[{c:"D7", best:true}, {c:"Am7>D7"}]},
       {id:"t2", step:"toward", bar:14, beat:1, say:"ここも次は {c:G7} です。枠を2つに分けて、II–V（{c:Am7}–{c:D7}）にします。",
         picks:[{c:"Am7>D7", best:true}, {c:"D7"}]},
+      {id:"x1", step:"chrom", bar:12, beat:1, say:"{c:F} の後半を ♯IVm7(♭5)（{c:F#m7b5}）にすると、ベースが {n:F} → {n:F#} と半音で上がって、次の I へつながります。",
+        picks:[{c:"F>F#m7b5", best:true}, {c:"F#m7b5", bad:true, why:"枠ごと替えると、前半のメロディの {n:F} が {n:F#} と半音でぶつかります。"}]},
+      {id:"k1", step:"cadence", bar:14, beat:3, say:"曲の終わりの V7 → I を替えます。IVm7 – ♭VII7（バックドア）は、ジャズらしく柔らかな終わり方です。",
+        picks:[{c:"Fm7>Bb7", best:true}, {c:"Fm6"}, {c:"Db7"}]},
       {id:"v1", step:"review"}
     ],
     harm:[

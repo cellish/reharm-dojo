@@ -140,9 +140,35 @@ test("phrase lengths are kept only when they are whole bars adding up to the son
 test("V → VIm is a deceptive cadence inside a phrase, but not when the V ended the previous phrase", () => {
   load("twinkle");
   const names = beat => run(`techniques(${cellAt(beat)}).filter(x=>x.tech==="func").map(x=>x.name)`);
-  // bar 4: G7 → (C) in the middle of the first phrase
-  assert.ok(names(14).some(n => n.startsWith("偽終止")), "bar 4, beat 3");
+  // bar 4: G7 → C ends the first phrase; the deceptive ending is offered under "終わり方を替える"
+  assert.ok(run(`techniques(${cellAt(14)}).some(x=>x.tech==="cadence" && x.name.startsWith("偽終止"))`), "bar 4, beat 3");
   // bar 9 begins a phrase; the G7 of bar 8 was a half cadence
   assert.ok(!names(32).some(n => n.startsWith("偽終止")), "bar 9, beat 1");
   assert.ok(names(32).some(n => n.includes("VIm7")), "VIm7 is still offered as a tonic substitute");
+});
+
+test("♯IVm7(♭5) joins the half-step approaches between IV and I/V in major", () => {
+  load("twinkle");   // bar 10: F (melody A A) then C
+  const i = cellAt(36), list = run(`techniques(${i}).filter(x=>x.tech==="chrom").map(x=>({n:x.split?splitPair(x,${i}).map(sym).join(">"):sym(x.c), v:itemVerdict(x,${i})}))`);
+  assert.ok(list.some(x => x.n === "F♯m7(♭5)" && x.v === "good"), JSON.stringify(list));
+  assert.ok(list.some(x => x.n === "F>F♯m7(♭5)"), JSON.stringify(list));
+  load("saints");    // bar 12: F with the melody on F clashes with F♯
+  const j = cellAt(44), v = run(`techniques(${j}).filter(x=>x.tech==="chrom"&&x.c&&x.c.q==="m7b5").map(x=>itemVerdict(x,${j}))`);
+  assert.deepEqual(v, ["bad"]);
+});
+
+test("the cadence technique offers other endings at a phrase's V → I, and only there", () => {
+  load("twinkle");
+  const at = b => run(`techniques(${cellAt(b)}).map(x=>x.tech+":"+(x.split?splitPair(x,${cellAt(b)}).map(sym).join(">"):sym(x.c)))`);
+  const v4 = at(12);  // bar 4: G7 → C ends the first phrase
+  for (const c of ["F", "Fm6", "B♭7", "D♭7", "Fm7>B♭7"]) assert.ok(v4.includes("cadence:" + c), c + " " + JSON.stringify(v4));
+  // the same chords are not offered twice under borrow or chrom
+  for (const c of ["Fm6", "B♭7", "D♭7"]) assert.ok(!v4.includes("borrow:" + c) && !v4.includes("chrom:" + c), c);
+  // bar 8: G7 is a half cadence (the C after it opens a new phrase)
+  assert.ok(!at(30).some(x => x.startsWith("cadence:")), "bar 8");
+  // bar 4, beat 3: the I that ends the phrase may become VIm7 (deceptive) ...
+  assert.ok(at(14).includes("cadence:Am7"));
+  // ... but not the song's last chord
+  const last = run("state.chords.length-1");
+  assert.ok(!run(`techniques(${last}).some(x=>x.tech==="cadence")`));
 });

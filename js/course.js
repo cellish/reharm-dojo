@@ -1,7 +1,7 @@
 // ---------- beginner course (入門コース, docs/PLAN.md section 5) ----------
 // The guide's steps, but each step shows hand-picked tasks (お題) from COURSES: one cell, two or three
 // candidates taken from that step's own candidate list, and one line on why. Only the songs in COURSES.
-const CFLOW = { reharm:["read","seventh","func","bass","cliche","toward","review"],
+const CFLOW = { reharm:["read","seventh","func","bass","cliche","toward","chrom","cadence","review"],
                 harm:["cad","rhythm","prim","flow","widen","color"] };
 const CSTEP_NAME = { read:"原曲を読む", review:"見直す", cad:GSTEPS[0], rhythm:GSTEPS[1], prim:GSTEPS[2], flow:GSTEPS[3], widen:GSTEPS[4], color:GSTEPS[5] };
 const cStepName = id => CSTEP_NAME[id] || TECH[id].name;
@@ -83,7 +83,8 @@ function playCourse(cells){
 }
 // {n:E} → a note name and {c:G7} → a chord symbol in the chosen key (the data is written in the C frame)
 // a step with no task in a song (e.g. no chord held for two cells inside one phrase, so no cliché)
-const CEMPTY = { cliche:"この曲には、同じコードが2枠以上続く所が、1つのフレーズの中にありません。クリシェは使わずに進みます。" };
+const CEMPTY = { cliche:"この曲には、同じコードが2枠以上続く所が、1つのフレーズの中にありません。クリシェは使わずに進みます。",
+  chrom:"この曲には、入門で使う半音の近づき方に合う所がありません。" };
 const sayText = s => String(s||"").replace(/\{n:([^}]+)\}/g, (m,x)=>droot(x)).replace(/\{c:([^}]+)\}/g, (m,x)=>sym(parseChord(x)));
 const COURSE_PLAY = new Set(["ccmp","corig","orig","all"]);
 // apply a pick to a copy of the cells (to sound a clashing example without placing it)
