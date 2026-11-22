@@ -58,3 +58,23 @@ test("the course is off for songs without tasks", () => {
   assert.equal(run("courseData()"), null);
   assert.equal(run("courseOn()"), false);
 });
+
+// the learner's path: each task's picks are checked on the cells as earlier tasks left them (their ★ placed),
+// so a later step never finds its cell already changed into something its list no longer offers
+test("reharm: every task still works after the earlier tasks' recommended picks are placed", () => {
+  vm.runInContext("var render = () => {}; save = () => {};", ctx);
+  for (const id of songs) {
+    load(id, false);
+    for (const step of run("CFLOW.reharm")) for (const t of run(`COURSES.${id}.reharm.filter(x=>x.step===${JSON.stringify(step)} && x.picks)`)) {
+      const sel = `COURSES.${id}.reharm.find(x=>x.id===${JSON.stringify(t.id)})`;
+      const i = run(`taskCell(${sel})`);
+      assert.ok(i >= 0, `${id} ${t.id}: no cell at bar ${t.bar} beat ${t.beat} after the earlier steps`);
+      const rp = run(`resolvePicks(${sel}, ${i}).map(r=>({c:r.p.c, found:!!r.it, v:r.v, bad:!!r.p.bad, best:!!r.p.best}))`);
+      for (const r of rp) {
+        assert.ok(r.found, `${id} ${t.id}: ${r.c} is not offered once the earlier tasks are done`);
+        assert.equal(r.v, r.bad ? "bad" : "good", `${id} ${t.id}: ${r.c} is ${r.v} on the learner's path`);
+      }
+      run(`(()=>{ const r=resolvePicks(${sel}, ${i}).find(r=>r.p.best); applyItem(${i}, r.it); })()`);
+    }
+  }
+});

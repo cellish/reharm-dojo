@@ -121,7 +121,8 @@ const TECH = {
   borrow: {name:"借りてくる", short:"借用", desc:"同じ主音の短調（短調の曲なら長調）からコードを借りて、陰りや明るさを足す。"},
   cadence:{name:"終わり方を替える", short:"終止", desc:"フレーズの終わりの V → I を、変格終止（IV → I）、IVm6 → I、バックドア（♭VII7 → I）、裏コード（♭II7 → I）、偽終止（V → VIm）などに替えて、終わり方の味を比べる。"},
 };
-const TECH_ORDER = ["seventh","func","bass","cliche","toward","chrom","borrow","cadence"];
+// the ending comes first: once a phrase's landing chord is chosen, the later steps lead toward it
+const TECH_ORDER = ["cadence","seventh","func","bass","cliche","toward","chrom","borrow"];
 // labels saved on cells by earlier versions → technique id
 const TECH_ALIAS = {"4和音化":"seventh","4和音":"seventh","ダイアトニック代理":"func","分数コード（ベースを動かす）":"bass","セカンダリードミナント":"toward","リレイテッド II":"toward",
   "着地点へ":"toward","裏コード":"chrom","パッシング・ディミニッシュ":"chrom","同主短調からの借用":"borrow","同主長調からの借用":"borrow"};
@@ -180,11 +181,11 @@ function techniques(i){
   if(dia(base,4) && dia(next,0) && endsPhrase(next)){
     if(!mi){
       add("cadence", C("F",""), "変格終止（IV → I）");
-      add("cadence", C("F","m6"), "IVm6 → I（同主短調から。柔らかく暗い終わり方）");
-      add("cadence", C("B♭","7"), "バックドア（♭VII7 → I）");
-      addSplit("cadence", C("F","m7"), C("B♭","7"), "バックドアの II–V（IVm7 – ♭VII7 → I）");
+      add("cadence", C("F","m6"), "IVm6 → I（同主短調から借りる。柔らかく少し切ない終わり方）");
+      add("cadence", C("B♭","7"), "バックドア（♭VII7 → I。同主短調から借りる）");
+      addSplit("cadence", C("F","m7"), C("B♭","7"), "バックドアの II–V（IVm7 – ♭VII7 → I。同主短調から借りる）");
     } else add("cadence", C("F","m"), "変格終止（IVm → Im）");
-    add("cadence", subOf(next), "裏コード（♭II7 → I）");
+    add("cadence", subOf(next), "裏コード（♭II7 → I。半音上から下りて終わる）");
   }
   // a deceptive cadence on a phrase's last I, but never on the song's last chord
   if(dia(base,0) && dia(prev,4) && endsPhrase(u) && i<state.chords.length-1){

@@ -1,7 +1,7 @@
 // ---------- beginner course (入門コース, docs/PLAN.md section 5) ----------
 // The guide's steps, but each step shows hand-picked tasks (お題) from COURSES: one cell, two or three
 // candidates taken from that step's own candidate list, and one line on why. Only the songs in COURSES.
-const CFLOW = { reharm:["read","seventh","func","bass","cliche","toward","chrom","cadence","review"],
+const CFLOW = { reharm:["read","cadence","seventh","func","bass","cliche","toward","chrom","review"],
                 harm:["cad","rhythm","prim","flow","widen","color"] };
 const CSTEP_NAME = { read:"原曲を読む", review:"見直す", cad:GSTEPS[0], rhythm:GSTEPS[1], prim:GSTEPS[2], flow:GSTEPS[3], widen:GSTEPS[4], color:GSTEPS[5] };
 const cStepName = id => CSTEP_NAME[id] || TECH[id].name;
