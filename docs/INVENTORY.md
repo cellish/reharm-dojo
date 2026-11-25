@@ -51,7 +51,7 @@
 | `test/theory.test.mjs` | `node --test`。`node:vm` に songs・music・theory・state を読み込んで試す（12件） |
 | `tools/smoke.py` | Playwright（Python）で全曲・両モード・全ステップを開き、候補の適用と Undo を試す |
 | `tools/single-file.py` | 上に書いた1ファイル版を作る |
-| `docs/PLAN.md`、`CLAUDE.md` | 計画と作業の手引き（Fable が計画と確認、Opus が実装） |
+| `PLAN.md`、`docs/DESIGN.md`、`STATUS.md`、`CLAUDE.md` | 未完了の作業、設計の決定、現状、作業の手引き（Fable が計画と確認、Opus が実装） |
 | `LICENSE`、`THIRD_PARTY_NOTICES.md` | 著作権表示（All rights reserved）と他者の著作物の一覧 |
 
 ## 2. 音楽データの表し方（最重要）
@@ -260,7 +260,7 @@ TODO・FIXME のコメントは無い（`grep` で確かめた）。コードを
   - ダブルシャープ・ダブルフラットを入力できない。
   - 6/8 などの複合拍子がない。
   - ヘ音記号・複数の声部がない。
-- **PLAN.md の「未決」**：E と F が残っている。確認の結果の R3・R4 で答えが出ているので、消し忘れと思われる（推測）。
+- **旧 `docs/PLAN.md` の「未決」**（現在は `PLAN.md` に移し、E・F は載せていない）：E と F が残っていた。確認の結果の R3・R4 で答えが出ているので、消し忘れと思われる（推測）。
 - **再生の止め方**：`playRange` が鳴らし終えたときの片付けが `play.bus.disconnect && setTimeout(()=>bus.disconnect(),600)` という、条件式に見える書き方になっている。動きに害はないが紛らわしい。
 - **自動テストで見ていないもの**：音（`smoke.py` はエラーの有無だけを見る）と、見た目（スクリーンショットは手で確かめる決まり）。
 
