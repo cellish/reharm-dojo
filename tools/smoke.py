@@ -149,11 +149,15 @@ with sync_playwright() as p:
                         ev(f"document.querySelectorAll('#insp [data-cp]')[{best}].click()")
                         if not ev(f"doneSet().has('{tid}')"):
                             errs.append(f"course {name} {tid}: placing the recommended pick did not finish the task")
-                        if harm and ev("curTask().step")=="prim":
-                            continue   # keep the harmonize chords: later steps build on them
+                        # Undo, then Redo: the pick stays placed, because later tasks build on the earlier picks
+                        # ("先ほど作った Gm7" and so on), as on the learner's path.
+                        after = ev("JSON.stringify(state.chords)")
                         ev("histGo(-1)")
                         if ev("JSON.stringify(state.chords)") != before:
                             errs.append(f"course {name} {tid}: undo did not bring the cells back")
+                        ev("histGo(1)")
+                        if ev("JSON.stringify(state.chords)") != after:
+                            errs.append(f"course {name} {tid}: redo did not bring the pick back")
                     if harm and ev("cStepId()") == "prim" and ev("!!$('#cFill')"):
                         ev("$('#cFill').click()")
                 ev("stop()")
