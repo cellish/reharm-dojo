@@ -1,7 +1,7 @@
 ---
 app: リハモ道場(Reharm Dojo)
 stage: 公開中          # 構想 / 試作 / 公開中 / 保守
-url:                 # GitHub Pages で公開(URL は文書に記載がなく未確認。確認して書く)
+url: https://cellish.github.io/reharm-dojo/
 updated: 2026-11-26
 ---
 ## 実装済み（要約）
