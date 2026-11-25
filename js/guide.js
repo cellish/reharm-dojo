@@ -809,7 +809,7 @@ function courseHtml(){
       </div>`;
   }
   
-  h+=`<div style="display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:4px;">
+  h+=`<div class="cstepbar">
     <ol class="steps gsteps">${flow.map((s,k)=>`<li class="${k+1===step?"on":""}${stepDone(s)?" done":""}"><button data-cs="${k+1}" title="${cStepName(s)}" aria-label="ステップ${k+1}：${cStepName(s)}${stepDone(s)?"（済み）":""}"${k+1===step?' aria-current="step"':""}></button></li>`).join("")}</ol>
     ${hasFinalEx ? `<button class="btn small${viewingThisEx?" primary":""}" id="cShowFinal" style="flex:none;">${viewingThisEx ? `完成例を表示中` : `完成例を見る`}</button>` : ""}
   </div>
