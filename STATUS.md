@@ -4,7 +4,7 @@ stage: 公開中          # 構想 / 試作 / 公開中 / 保守
 url: https://cellish.github.io/reharm-dojo/
 updated: 2026-11-26
 os:                  # 対応 / 一部制限 / 非対応 / 未確認
-  macos: 対応
+  macos: 未確認
   ios: 未確認        # iPadOS を含む
   windows: 未確認
   android: 未確認
@@ -33,5 +33,5 @@ os:                  # 対応 / 一部制限 / 非対応 / 未確認
 ## OS / ブラウザ対応状況
 - macOS: Chrome 対応(`tools/smoke.py` が利用者の環境で通った。幅 1280px と 480px の表示を確認。2026-11 確認) / Safari 未確認
 - iOS / iPadOS: 未確認(幅 480px の表示は確認。実機の記録なし。MIDI・マイクは使わない)
-- Windows: Chrome / Edge 未確認
+- Windows: Chrome 未確認
 - Android: Chrome 未確認
