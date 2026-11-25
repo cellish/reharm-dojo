@@ -114,7 +114,8 @@ python3 tools/smoke.py      # 全曲・両モード・全ステップを開き�
 - Claude のアーティファクト版（「リハモ道場」）は、`python3 tools/single-file.py out.html` で作った1ファイルを公開する。こちらは計画担当の会話で行うので、実装担当は触らない。
 
 ## ドキュメント更新
-- 作業の終わりに STATUS.md を上書き更新（50行以内）
-- 完了した作業は PLAN.md から削除
+- 作業の終わりに STATUS.md を上書き更新（50行以内、updated を更新）
+- 完了した作業は PLAN.md から削除し、STATUS の「実装済み」に要約
 - 外部素材を追加・削除したら THIRD_PARTY_NOTICES.md を更新
-- 詳細方針は道場シリーズ親フォルダの CLAUDE.md（DOCS-POLICY.md）を参照
+- OS・ブラウザ対応が変わったら STATUS の os: と対応状況を更新（未確認を「対応」と書かない）
+- 詳細方針は道場シリーズ親フォルダの DOCS-POLICY.md を参照
