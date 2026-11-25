@@ -25,3 +25,8 @@ updated: 2026-11-26
 - コード・旋律の判定(`js/theory.js`): 独自実装
 - コード名の読み取り・移調(`js/music.js`): 独自実装
 - 音の再生(Web Audio): 独自実装
+## OS対応状況
+- macOS: 対応(利用者の環境で `tools/smoke.py` が通った。幅 1280px で確認)
+- iOS / iPadOS: 未確認(幅 480px の表示は確認。実機の記録なし。MIDI・マイクは使わない)
+- Windows: 未確認
+- Android: 未確認
