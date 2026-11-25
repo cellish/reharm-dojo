@@ -453,8 +453,9 @@ const RDESC = {
   bass:"コードはそのままに、ベースの音だけを変えます。分数コード C/E は「C のコードで、ベースは E」という意味です。転回形でベースをなめらかにつなぐ、ベースを1音ずつ下げる（上げる）、同じベースを保つ（ペダル）、V の代わりに IV/V の形を使う、が代表です。楽譜の下にベースラインが出ます。",
   cliche:"同じコードが2枠以上続く所で使います。コードの中の1音だけを半音ずつ動かすと、止まっていた響きに線が生まれます（クリシェ）。提案を選ぶと、続いている枠にまとめて入ります。",
   toward:"次のコードを着地点とみなして、そこへ向かうコードを置きます。次のコードの V7（セカンダリードミナント）や II が代表です。「II–V にする」「II–V に分ける」を選ぶと、枠が2つに分かれて両方入ります。「着地点から」タブで、着地点から手前へ組み立てることもできます。",
-  chrom:"V7 を裏コード（♭II7）に替えたり、ディミニッシュをはさんだりして、ベースを半音で動かします。",
+  chrom:"V7 を裏コード（♭II7）に替えたり、ディミニッシュや ♯IVm7(♭5) をはさんだりして、ベースを半音で動かします。",
   borrow:"同じ主音の短調（短調の曲なら長調）からコードを借りて、陰りや明るさを足します。IVm や ♭VII7 が定番です。",
+  cadence:"フレーズの終わり（V → I）の終わり方を替えます。IV → I（変格終止）は柔らかく、IVm6 → I は少し切なく、♭VII7 → I（バックドア）や ♭II7 → I（裏コード）はジャズらしく終わります。V → VIm（偽終止）は、終わると思わせて続けます。",
   review:"最後に見直します。変えすぎていないか、骨格の音のぶつかりが増えていないかを確かめ、原曲と聴き比べます。全部の枠を変える必要はありません。"
 };
 const rStepCands = (id,i) => techniques(i).filter(x=>x.tech===id);
@@ -496,7 +497,7 @@ function rGuideHtml(){
       <p class="hint">選んだ枠のバーの「聴き比べ」で、原曲といまのコードを聴き比べられます。気に入らない所は「原曲に戻す」か、Ctrl+Z で戻せます。</p>`;
   } else {
     const opts=rStepCands(id,i), usable=state.chords.map((u,k)=>k).filter(k=>rStepUsable(id,k));
-    const cnt=rStepCount(id), goal=["toward","chrom","cliche"].includes(id)?1:2;
+    const cnt=rStepCount(id), goal=["toward","chrom","cliche","cadence"].includes(id)?1:2;
     h+=`<div class="chainrow"><span>課題：この段階の手法を ${goal} か所で使ってみよう（いま ${cnt}）${cnt>=goal?" <b class='okmark'>✓ 達成</b>":""}</span></div>
       <h3 class="sub">${slotName(i)}（いま ${esc(sym(state.chords[i]))}・原曲 ${esc(sym(origAt(i)))}）の候補</h3>`;
     h+= opts.length ? `<div class="cands revopts">${opts.map((o,k)=>candItem(o,i,`data-rc="${k}"`)).join("")}</div>`
@@ -504,7 +505,7 @@ function rGuideHtml(){
     h+=`<div class="gbtns"><span class="hint" style="font-size:12.5px">メロディに合う候補がある枠：${usable.length}（コード名を点線で囲んであります）</span>${usable.length?`<button class="btn small" id="nextUsable">次の枠へ</button>`:""}</div>`;
     if(id==="toward") h+=`<div class="gbtns"><button class="btn small" id="toRev2" ${i<state.chords.length-1&&state.chords[i+1]?.root?"":"disabled"}>次の枠を着地点にして「着地点から」タブで作る</button></div>`;
   }
-  h+=`<div class="gnav"><button class="btn" id="gPrev" ${step===1?"disabled":""}>← 前へ</button><span class="sp"></span><button class="btn primary" id="gNext" ${step===n?"disabled":""}>次へ →</button></div></div>`;
+  h+=`<div class="gbtns"><label class="chk" style="font-size:12.5px"><input type="checkbox" id="autoPlayOn" ${state.autoPlay?"checked":""}>変更時に自動再生</label></div><div class="gnav"><button class="btn" id="gPrev" ${step===1?"disabled":""}>← 前へ</button><span class="sp"></span><button class="btn primary" id="gNext" ${step===n?"disabled":""}>次へ →</button></div></div>`;
   return h;
 }
 function bindRGuide(el){
@@ -522,6 +523,7 @@ function bindRGuide(el){
   const nu=$("#nextUsable"); if(nu) nu.onclick=()=>{ const U=state.chords;
     let k=U.findIndex((u,j)=>j>i && rStepUsable(id,j)); if(k<0) k=U.findIndex((u,j)=>rStepUsable(id,j)); if(k>=0) selectCell(k); };
   const tr=$("#toRev2"); if(tr) tr.onclick=()=>{ rev={target:i+1, chain:[]}; state.sel=i+1; state.tab="rev"; store.set(tabKey(),"rev"); render(); };
+  const ap=$("#autoPlayOn"); if(ap) ap.onchange=e=>{ state.autoPlay=e.target.checked; store.set("rehamo:autoplay", state.autoPlay); };
 }
 
 function renderInsp(){ renderInspBody(); restoreTerm(); showAnsNote(); }
@@ -544,10 +546,17 @@ function renderInspBody(){
   const i=state.sel;
   $("#selbar").innerHTML = selbarHtml(i);
   const tabs = `<div class="tabs" role="tablist">
+    ${!state.harm ? `<button role="tab" data-tab="course" aria-selected="${state.tab==="course"}">入門</button>` : ""}
     <button role="tab" data-tab="guide" aria-selected="${state.tab==="guide"}">ガイド</button>
     <button role="tab" data-tab="cand" aria-selected="${state.tab==="cand"}">${state.harm?"コード候補":"置き換え候補"}</button>
     <button role="tab" data-tab="rev" aria-selected="${state.tab==="rev"}">着地点から</button></div>`;
-  const el=$("#insp"); el.innerHTML = tabs + (state.tab==="rev" ? revHtml() : state.tab==="guide" ? guideHtml() : candHtml(i));
+  const el=$("#insp"); 
+  let tabContent = "";
+  if(state.tab==="rev") tabContent = revHtml();
+  else if(state.tab==="cand") tabContent = candHtml(i);
+  else if(state.tab==="course" && !state.harm) tabContent = courseHtml();
+  else tabContent = guideHtml();
+  el.innerHTML = tabs + tabContent;
   el.querySelectorAll(".tabs button").forEach(b=>b.onclick=()=>{ state.tab=b.dataset.tab; store.set(tabKey(),state.tab); el.scrollTop=0; renderInsp(); });
   if(el.dataset.sel!==String(i)){ el.scrollTop=0; el.dataset.sel=i; }
   $("#hearHere").onclick=()=>{ if(play&&play.mode==="here") stop(); else playRange(i, state.chords.length, state.chords, "here"); };
@@ -561,6 +570,7 @@ function renderInspBody(){
   const scp=$("#selCmpP"); if(scp) scp.onclick=()=>{ if(play&&play.mode==="plancmp") stop(); else playCompare("plancmp"); };
   $("#splitBtn").onclick=()=>{ splitUnit(i); render(); };
   $("#mergeBtn").onclick=()=>{ mergeNext(i); render(); };
+  if(state.tab==="course" && !state.harm){ bindCourse(el); return; }
   if(state.tab==="guide"){ bindGuide(el); return; }
   if(state.tab==="cand"){
     const groups=suggest(i);
@@ -603,4 +613,491 @@ function renderInspBody(){
     state.sel=p; save(); render();
     playRange(p, t+1, state.chords, "slot");
   });
+}
+// ---------- beginner course (入門コース, docs/PLAN.md section 5) ----------
+// The guide's steps, but each step shows hand-picked tasks (お題) from COURSES: one cell, two or three
+// candidates taken from that step's own candidate list, and one line on why. Only the songs in COURSES.
+const CFLOW = () => {
+  if (state.harm) return ["cad","rhythm","prim","flow","widen","color"];
+  const c = COURSES[state.songId];
+  if (c && c[state.genre] && c[state.genre].steps) return c[state.genre].steps;
+  return ["read","cadence","seventh","cliche","func","bass","toward","chrom","borrow","review"];
+};
+const CSTEP_NAME = { read:"原曲を読む", setup:"土台の調整", review:"見直す", cad:GSTEPS[0], rhythm:GSTEPS[1], prim:GSTEPS[2], flow:GSTEPS[3], widen:GSTEPS[4], color:GSTEPS[5] };
+const cStepName = id => CSTEP_NAME[id] || TECH[id].name;
+const courseData = () => { const c=COURSES[state.songId]; return c ? (state.harm ? c.harm : (c[state.genre] ? c[state.genre].tasks : null)) : null; };
+function genreBaseChords(songId, g){
+  if(g==="basic") return origUnits();
+  const base = typeof BASIC_FOUNDATION!=="undefined" && BASIC_FOUNDATION[songId];
+  if(!base) return origUnits();
+  const ch = JSON.parse(JSON.stringify(base));
+  const mods = COURSES[songId]?.[g]?.baseMods;
+  if(mods){
+    mods.forEach(m => {
+      const b = (m.bar-1)*song.bpb + (m.beat-1);
+      if(m.split){
+        const idx = ch.findIndex(x => Math.abs(x.s-b)<1e-6);
+        if(idx>=0 && ch[idx].l>=2){
+          const u=ch[idx], a=Math.ceil(u.l/2);
+          ch.splice(idx, 1, {...u, l:a}, {...u, s:u.s+a, l:u.l-a});
+        }
+        return;
+      }
+      const u = ch.find(x => Math.abs(x.s-b)<1e-6);
+      if(u){ u.root = m.c.root; u.q = m.c.q; if(m.c.bass) u.bass = m.c.bass; else delete u.bass; u.tech = "土台調整"; }
+    });
+    const merged = [];
+    ch.forEach(u => {
+      const prev = merged[merged.length-1];
+      if(prev && Math.floor(prev.s/song.bpb)===Math.floor(u.s/song.bpb) && same(prev, u)) prev.l += u.l;
+      else merged.push(u);
+    });
+    return merged;
+  }
+  return ch;
+}
+// The plans hold one sheet per song, but course progress is kept per genre. So the sheet of the
+// genre being left is kept aside, and "続きから再開" brings it back with that genre's progress.
+const genreKey = id => "rehamo:genre:"+id;
+const gsheetKey = (g, id=state.songId) => "rehamo:gsheet:"+g+":"+id;
+const onExample = () => !!(plans.list[plans.cur] && plans.list[plans.cur].isExample);
+function keepGenreSheet(){ if(state.harm || !COURSES[state.songId] || onExample()) return; store.set(gsheetKey(state.genre), state.chords); }
+// course actions write into the open plan; never into the 完成例 plan
+function leaveExample(){ if(!onExample()) return; const w=plans.list.findIndex(p=>!p.isExample); if(w>=0) switchPlan(w); }
+function setGenre(g){ state.genre=g; state.pendingGenre=null; cmsg=null; if(!state.harm) store.set(genreKey(state.songId), g); }
+const cstepKey = () => (state.harm?"rehamo:hcstep:":"rehamo:cstep:"+state.genre+":")+state.songId;
+const ctaskKey = () => (state.harm?"rehamo:htask:":"rehamo:task:"+state.genre+":")+state.songId;
+const cmem = {}, cpick = {};   // open step and open task, kept for the session even when storage is off
+let cmsg = null;               // the line shown after a choice: {kind, text}
+const getCStep = () => Math.min(CFLOW().length, Math.max(1, cmem[cstepKey()] || store.get(cstepKey()) || 1));
+const cStepId = () => CFLOW()[getCStep()-1];
+const doneSet = () => { const d=cmem[ctaskKey()] || store.get(ctaskKey()); return new Set(Array.isArray(d)?d:[]); };
+function markDone(id){
+  const d=doneSet(); if(d.has(id)) return false;
+  d.add(id); cmem[ctaskKey()]=[...d]; store.set(ctaskKey(), [...d]); return true;
+}
+const stepTasks = id => (courseData()||[]).filter(t=>t.step===id);
+const stepDone = id => { const ts=stepTasks(id), d=doneSet(); return ts.length>0 && ts.every(t=>d.has(t.id)); };
+// the open task of the open step: the one last chosen, else the first not done, else the first
+function curTask(){
+  const id=cStepId(), ts=stepTasks(id), d=doneSet(), k=cpick[cstepKey()+":"+id];
+  return ts.find(t=>t.id===k) || ts.find(t=>!d.has(t.id)) || ts[0] || null;
+}
+const beatOf = (bar, beat) => (bar-1)*song.bpb + (beat-1);
+const cellAtBeat = b => state.chords.findIndex(u=>Math.abs(u.s-b)<1e-6);
+const taskCell = t => t.bar ? cellAtBeat(beatOf(t.bar, t.beat)) : -1;
+// a pick written as "Cmaj7", "Am7>D7" (a split cell) or "C,C7" (a run of cells) → a key comparable with a list entry
+const pickKey = s => s.split(/([,>])/).map(x=>x===","||x===">" ? x : ckey(parseChord(x))).join("");
+const pickLen = s => s.split(",").length;
+function entryKey(it, i){
+  if(it.cells) return it.cells.map(x=>ckey(x.c)).join(",");
+  if(it.split) return splitPair(it,i).map(ckey).join(">");
+  return ckey(it.c);
+}
+// the candidates the ordinary guide shows for this step at cell i, as items
+function stepList(step, i){
+  if(i<0) return [];
+  if(TECH[step]) return rStepCands(step, i);
+  const K=keyOfCell(i), P=PRIM(K), PN=PRIM_NAME(K), u=state.chords[i];
+  if(step==="cad") return ["I","V"].map(k=>({c:P[k], name:PN[k], label:k==="I"?"終止":"半終止"}));
+  if(step==="prim" || step==="flow") return ["I","IV","V","V7"].map(k=>({c:P[k], name:PN[k], label:PN[k]}));
+  if(step==="widen") return u.root ? widenOptions(u,K).map(([c,n])=>({c, name:n, label:"代理"})) : [];
+  if(step==="color") return u.root ? colorList(i).map(([c,n,l])=>({c, name:n, label:l||n.replace(/（.*）/,"")})) : [];
+  return [];
+}
+const entryVerdict = (it, i) => TECH[it.tech] ? itemVerdict(it, i) : verdict(rolesFor(it.c, i));
+// the task's picks matched against the list: {p, it (null when the list no longer has it), v}
+function resolvePicks(t, i){
+  const list=stepList(t.step, i);
+  return (t.picks||[]).map(p=>{ const k=pickKey(p.c), it=list.find(x=>entryKey(x,i)===k)||null;
+    return {p, it, v: it ? entryVerdict(it, i) : null}; });
+}
+// cells to light up on the score for the open task
+function courseMarks(){
+  const t=curTask(); if(!t) return new Set();
+  if(t.spots) return new Set(t.spots.map(s=>cellAtBeat(beatOf(s.bar,s.beat))).filter(k=>k>=0));
+  const i=taskCell(t); if(i<0) return new Set();
+  const n=Math.max(...(t.picks||[{c:"C"}]).map(p=>pickLen(p.c)));
+  return new Set(Array.from({length:n},(x,k)=>i+k).filter(k=>k<state.chords.length));
+}
+// the harmonize course starts from the original's cells, so each task has its cell
+const gridIsOrig = () => state.chords.length===song.orig.length && state.chords.every((u,k)=>Math.abs(u.s-song.orig[k].s)<1e-6 && Math.abs(u.l-song.orig[k].l)<1e-6);
+const emptyOrigGrid = () => song.orig.map(u=>({s:u.s, l:u.l, root:null, q:null}));
+function openTask(t){
+  cmsg=null; if(!t) return;
+  cpick[cstepKey()+":"+t.step]=t.id;
+  const i = t.spots ? cellAtBeat(beatOf(t.spots[0].bar, t.spots[0].beat)) : taskCell(t);
+  if(i>=0) state.sel=i;
+}
+function goCStep(s){
+  cmem[cstepKey()]=s; store.set(cstepKey(), s); cmsg=null;
+  openTask(curTask()); const el=$("#insp"); if(el) el.scrollTop=0; render();
+}
+// play the four bars around the selected cell once, with the given cells (the score marks where it is)
+function playCourse(cells){
+  const {b0,b1}=cmpRange(), from=cells.findIndex(x=>x.s+x.l>b0+1e-6), to=cells.findIndex(x=>x.s>=b1-1e-6);
+  playRange(Math.max(0,from), to<0?cells.length:to, cells, "ccmp");
+}
+// {n:E} → a note name and {c:G7} → a chord symbol in the chosen key (the data is written in the C frame)
+// a step with no task in a song (e.g. no chord held for two cells inside one phrase, so no cliché)
+const CEMPTY = { cliche:"この曲には、同じコードが2枠以上続く所が、1つのフレーズの中にありません。クリシェは使わずに進みます。",
+  chrom:"この曲には、入門で使う半音の近づき方に合う所がありません。" };
+const sayText = s => String(s||"").replace(/\{n:([^}]+)\}/g, (m,x)=>droot(x)).replace(/\{c:([^}]+)\}/g, (m,x)=>sym(parseChord(x)));
+const COURSE_PLAY = new Set(["ccmp","corig","orig","all"]);
+// apply a pick to a copy of the cells (to sound a clashing example without placing it)
+function applyToCopy(it, i){
+  const U=JSON.parse(JSON.stringify(state.chords));
+  const put=(k,c)=>{ const u=U[k]; U[k]={s:u.s, l:u.l, root:c.root, q:c.q, ...(c.bass?{bass:c.bass}:{})}; };
+  if(it.cells) it.cells.forEach(x=>put(x.i, x.c));
+  else if(it.split){ const [c1,c2]=splitPair(it,i), u=U[i], a=Math.ceil(u.l/2);
+    U.splice(i,1,{s:u.s,l:a,root:c1.root,q:c1.q,...(c1.bass?{bass:c1.bass}:{})},{s:u.s+a,l:u.l-a,root:c2.root,q:c2.q,...(c2.bass?{bass:c2.bass}:{})}); }
+  else put(i, it.c);
+  return U;
+}
+function placeEntry(t, it, i){
+  if(TECH[t.step]) applyItem(i, it); else setChord(i, it.c, it.label||"");
+}
+
+// ---- panel ----
+function courseHtml(){
+  const flow=CFLOW(), step=getCStep(), id=flow[step-1], n=flow.length, i=state.sel, d=doneSet();
+  const c = COURSES[state.songId];
+  const isReharm = !state.harm && c;
+  const genres = isReharm ? Object.keys(c).filter(k => k !== "harm") : [];
+  
+  let h=`<div class="revbox course">`;
+  
+  const hasFinalEx = typeof COURSE_FINALS!=="undefined" && COURSE_FINALS[state.songId] && COURSE_FINALS[state.songId][state.genre];
+  const gLabel = c && c[state.genre] ? c[state.genre].label : "";
+  const viewingThisEx = !!plans.list[plans.cur]?.isExample && plans.list[plans.cur]?.name === `完成例（${gLabel}）`;
+
+  if(isReharm && genres.length > 1){
+    const subGenres = genres.filter(g => g !== "basic");
+    const activeIds = new Set(((c[state.genre]&&c[state.genre].tasks)||[]).filter(x=>!["read","setup","rhythm","review"].includes(x.step)).map(x=>x.id));
+    const hasActiveProgress = [...d].some(tid => activeIds.has(tid));
+    const baseArr = state.genre !== "basic" && genreBaseChords(state.songId, state.genre);
+    const notAtBase = baseArr && JSON.stringify(state.chords.map(u=>({s:u.s,l:u.l,r:u.root,q:u.q,b:u.bass||""}))) !== JSON.stringify(baseArr.map(u=>({s:u.s,l:u.l,r:u.root,q:u.q,b:u.bass||""})));
+    const restartLabel = state.pendingGenre === "basic" ? "原曲に戻して最初から" : "リハモ入門の完成形から始める";
+    
+    h+=`<div style="margin-bottom:12px; display:flex; flex-direction:column; gap:6px; border-bottom:1px solid var(--rule); padding-bottom:10px;">
+        ${c.basic ? `<div style="display:flex; flex-wrap:wrap; align-items:center; gap:6px;">
+          <span style="font-size:12.5px; font-weight:700; color:var(--ink-2);">1.</span>
+          <button class="btn small${state.genre==='basic' && !state.pendingGenre?' primary':''}" data-genre="basic">${esc(c.basic.label)}</button>
+          <span class="hint" style="margin:0; font-size:12px;">基本手法を体験しよう</span>
+        </div>` : ""}
+        ${subGenres.length ? `<div style="display:flex; flex-wrap:wrap; align-items:center; gap:4px 6px;">
+          <span style="font-size:12.5px; font-weight:700; color:var(--ink-2);">2.</span>
+          ${subGenres.map(g => `<button class="btn small${state.genre===g && !state.pendingGenre?' primary':''}" data-genre="${g}">${esc(c[g].label)}</button>`).join("")}
+          <span class="hint" style="margin:0; font-size:12px;">さらにアレンジを加えよう</span>
+        </div>` : ""}
+        ${state.pendingGenre ? `
+          <div style="width:100%; margin-top:4px; padding:8px 12px; background:var(--mark); color:var(--mark-ink); border-radius:6px; font-size:13px;">
+            「${esc(c[state.pendingGenre].label)}」は途中の記録があります。
+            <div style="display:flex; flex-wrap:wrap; gap:6px; margin-top:8px;">
+              <button class="btn small" id="cResume" style="background:var(--sheet);color:var(--ink);border-color:transparent;">続きから再開</button>
+              <button class="btn small" id="cRestart" style="background:var(--sheet);color:var(--ink);border-color:transparent;">${restartLabel}</button>
+            </div>
+          </div>
+        ` : `
+          <p class="hint" style="margin:2px 0 0; width:100%;">${esc(c[state.genre].desc)}</p>
+          ${state.genre !== "basic" && !hasActiveProgress && notAtBase ? `<div style="margin-top:2px;"><button class="btn small" id="cApplyBase">リハモ入門の完成形をセットする</button></div>` : ""}
+          ${hasActiveProgress ? `<div style="margin-top:2px; text-align:right;"><button class="linkbtn" id="cRestartCur" style="font-size:12px;color:var(--ink-2);background:none;border:0;padding:0;text-decoration:underline;cursor:pointer;">${state.genre==="basic"?"このコースを最初からやり直す":"リハモ入門の完成形からやり直す"}</button></div>` : ""}
+        `}
+      </div>`;
+  }
+  
+  h+=`<div style="display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:4px;">
+    <ol class="steps gsteps">${flow.map((s,k)=>`<li class="${k+1===step?"on":""}${stepDone(s)?" done":""}"><button data-cs="${k+1}" title="${cStepName(s)}" aria-label="ステップ${k+1}：${cStepName(s)}${stepDone(s)?"（済み）":""}"${k+1===step?' aria-current="step"':""}></button></li>`).join("")}</ol>
+    ${hasFinalEx ? `<button class="btn small${viewingThisEx?" primary":""}" id="cShowFinal" style="flex:none;">${viewingThisEx ? `完成例を表示中` : `完成例を見る`}</button>` : ""}
+  </div>
+  <h3 class="gtitle"><small>${isReharm ? c[state.genre].label : "入門"}・ステップ ${step} / ${n}</small>${cStepName(id)}</h3>`;
+  if(state.harm && !gridIsOrig()){
+    h+=`<p class="hint">入門は、原曲と同じ枠（コードは空）から始めます。いまの案にはコードが入っているので、新しい案で始めます。</p>
+      <div class="gbtns"><button class="btn primary" id="cGrid" ${plans.list.length<PLAN_MAX?"":"disabled"}>新しい案で始める</button></div>
+      ${plans.list.length<PLAN_MAX?"":`<p class="hint">案がいっぱいです。使わない案を消してください。</p>`}</div>`;
+    return h;
+  }
+  const ts=stepTasks(id), t=curTask();
+  if(!ts.length) h+=`<p class="hint">${glossed(CEMPTY[id]||"この曲には、このステップのお題がありません。")}「次へ」で先へ進みます。</p>`;
+  if(ts.length>1 || (ts.length===1 && ts[0].bar)) h+=`<div class="ctasks">${ts.map((x,k)=>`<button class="chip${x===t?" on":""}${d.has(x.id)?" done":""}" data-ct="${x.id}">お題 ${k+1}${d.has(x.id)?" ✓":""}</button>`).join("")}</div>`;
+  if(t) h+=courseTaskHtml(t, i);
+  if(id==="prim") h+=fillBtnHtml();   // shown whatever the task's state, so the later steps can start from full cells
+  const pv=cMove(-1), nx=cMove(1);
+  h+=`<div class="gbtns"><button class="btn small" id="cStop" ${play&&COURSE_PLAY.has(play.mode)?"":"hidden"}>■ 再生を止める</button><label class="chk" style="font-size:12.5px"><input type="checkbox" id="autoPlayOn" ${state.autoPlay?"checked":""}>変更時に自動再生</label></div>`;
+  h+=`<div class="gnav"><button class="btn" id="cPrev" ${pv?"":"disabled"}>← 前へ${pv?`<small>（${esc(pv.label)}）</small>`:""}</button><span class="sp"></span>
+    <button class="btn primary" id="cNext" ${nx?"":"disabled"}>次へ →${nx?`<small>（${esc(nx.label)}）</small>`:""}</button></div>
+    </div>`;
+  return h;
+}
+// where "次へ" / "前へ" go: the next task of this step, else the next step (its first task, or its last going back)
+function cMove(dir){
+  const flow=CFLOW(), step=getCStep(), ts=stepTasks(cStepId()), t=curTask(), k=ts.indexOf(t);
+  if(k+dir>=0 && k+dir<ts.length) return {task:ts[k+dir], step, label:`お題 ${k+dir+1}`};
+  const s=step+dir; if(s<1 || s>flow.length) return null;
+  const ns=stepTasks(flow[s-1]), nt=dir>0 ? ns[0] : ns[ns.length-1];
+  return {task:nt, step:s, label:`ステップ ${s}`};
+}
+function cmsgHtml(){ return cmsg ? `<p class="cmsg ${cmsg.kind}">${esc(cmsg.text)}</p>` : ""; }
+function courseTaskHtml(t, i){
+  const d=doneSet(), done=d.has(t.id);
+  if(t.step==="read"){
+    return `<p class="hint">${glossed("フレーズの終わり方を聴き比べます。楽譜で光っている2か所です。")}</p>
+      <div class="cspots">${t.spots.map((s,k)=>`<div class="gitem"><b>${s.bar}小節目</b>
+        <div class="gbtns"><button class="btn small" data-hear="${k}">▶ 聴く</button><button class="btn small" data-end="${k}">こちらが終わった感じ</button></div></div>`).join("")}</div>
+      ${done?`<p class="cmsg good">✓ ${glossed(sayText(t.say))}</p>`:cmsgHtml()}`;
+  }
+  if(t.step==="setup"){
+    return `<p class="hint">${glossed(sayText(t.say))}</p>
+      <div class="cspots">${(t.spots||[]).map((s,k)=>`<div class="gitem"><b>${s.bar}小節目周辺</b>
+        <div class="gbtns"><button class="btn small" data-hear-setup="${k}">▶ 聴く</button></div></div>`).join("")}</div>
+      <p class="hint">調整された土台を聴いて確かめたら、「次へ」でアレンジを始めましょう。</p>`;
+  }
+  if(t.step==="rhythm") return `<p class="hint">${glossed(sayText(t.say))}</p><p class="hint">入門では、はじめから原曲と同じ枠にしてあります。</p>`;
+  if(t.step==="review") return reviewHtml();
+  if(t.step==="flow") return flowTaskHtml(i);
+  const ti=taskCell(t);
+  if(ti<0) return `<p class="hint">この枠の区切りが原曲と違うので、このお題はできません。「次へ」で先へ進んでください。</p>`;
+  const marks=courseMarks();
+  if(!marks.has(i)) return offTaskHtml(t, i);
+  let h=`<p class="hint"><b>${slotName(ti)}</b>：${glossed(sayText(t.say))}</p>`;
+  if(done){
+    h+=`<p class="cmsg good">✓ このお題は済みました。いまのコード：${esc(sym(state.chords[ti]))}</p>${cmsgHtml()}
+      <div class="gbtns"><button class="btn small" id="cRedo">このお題をもう一度</button></div>
+      <p class="hint">「次へ」で、次のお題に進みます。</p>`;
+    return h;
+  }
+  const needCl4 = t.needCliche4 && !(state.chords.length>=4 && [0,1,2,3].every(k=>state.chords[k].l===2 && same(state.chords[k], {root:"C",q:""})));
+  const needCur = t.need && !same(state.chords[ti], parseChord(t.need));
+  const needNxt = t.needNext && state.chords[ti+1] && !state.chords[ti+1].root;
+  if(needCl4 || needCur || needNxt){
+    const nc = t.need ? parseChord(t.need) : state.chords[ti];
+    const nxc = t.needNext ? parseChord(t.needNext) : null;
+    const msg = needCl4 ? `4段階のクリシェを作るため、1〜2小節目を2拍ずつ4枠の ${esc(sym({root:"C",q:""}))} に揃えます。`
+              : needCur && needNxt ? `このお題は、この枠が ${esc(sym(nc))}、次の枠が ${esc(sym(nxc))} のときにできます。`
+              : needCur ? `このお題は、この枠が ${esc(sym(nc))} のときにできます。`
+              : `このお題は、次の枠に ${esc(sym(nxc))} が入っているときにできます。`;
+    return h+`<p class="hint">${msg}</p>
+      <div class="gbtns"><button class="btn small primary" id="cNeed">前提のコードをセットする</button></div>`;
+  }
+  const rp=resolvePicks(t, ti);
+  if(rp.some(r=>!r.it)){
+    return h+`<p class="hint">この枠のコードが変わっているので、お題の候補が出せません。原曲のコードに戻すと、このお題ができます。</p>
+      <div class="gbtns"><button class="btn small primary" id="cBack">原曲のコードに戻す</button></div>`;
+  }
+  h+=`<div class="cands revopts">${rp.map((r,k)=>courseCand(r, ti, k)).join("")}</div>${cmsgHtml()}
+    <p class="hint">済ませなくても「次へ」で先へ進めます。</p>`;
+  return h;
+}
+function courseCand(r, i, k){
+  const mark = r.p.best ? `<span class="cbest">★ おすすめ</span>` : r.p.bad ? `<span class="cbad">合わない例</span>` : "";
+  const it=r.it, attrs=`data-cp="${k}"`;
+  return TECH[it.tech] ? candItem(it, i, attrs).replace(/<\/button>$/, mark+"</button>")
+                       : candButton(it.c, i, attrs, `<span class="oname">${esc(it.name)}</span>${mark}`);
+}
+function fillBtnHtml(){
+  const empt=state.chords.filter(u=>!u.root).length;
+  return empt ? `<p class="hint">お題が済んだら、残りの枠は自分で埋めるか、原曲のコードを入れて先へ進めます。</p>
+    <div class="gbtns"><button class="btn small" id="cEmpty">次に決める枠へ</button><button class="btn small" id="cFill">残りの枠（${empt}）に原曲のコードを入れる</button></div>` : "";
+}
+// a cell that is not the task's: this step's ordinary candidates for it, and a way back
+function offTaskHtml(t, i){
+  const list=stepList(t.step, i);
+  return `<p class="hint">この枠はお題ではありません。${list.length?"このステップの候補を、ここでも試せます。":""}</p>
+    ${list.length?`<div class="cands revopts">${list.map((it,k)=>TECH[it.tech]?candItem(it,i,`data-oc="${k}"`):candButton(it.c,i,`data-oc="${k}"`,`<span class="oname">${esc(it.name)}</span>`)).join("")}</div>`:""}
+    <div class="gbtns"><button class="btn small primary" id="cBackTask">お題に戻る</button></div>`;
+}
+function flowTaskHtml(i){
+  const iss=flowIssues();
+  if(!iss.length) return `<p class="cmsg good">✓ 気になる点はありません。コードの機能が T → S → D → T の流れになっています。</p>`;
+  const x=iss[0], list=stepList("flow", i);
+  return `<p class="hint">${glossed("コードの機能（T・S・D）の流れで、気になる所を1つずつ直します。")}</p>
+    <ul class="issues"><li class="${x.kind}"><button data-go="${x.i}">${esc(x.text)}</button></li></ul>
+    ${i===x.i?`<div class="cands">${list.map((it,k)=>candButton(it.c,i,`data-oc="${k}"`,`<span class="oname">${esc(it.name)}</span>`)).join("")}</div>`:`<div class="gbtns"><button class="btn small primary" data-go="${x.i}">その枠を選ぶ</button></div>`}
+    ${iss.length>1?`<p class="hint">ほかに ${iss.length-1} か所あります。</p>`:""}`;
+}
+function reviewHtml(){
+  const n=state.chords.length, changed=state.chords.filter((u,k)=>isChanged(k)).length;
+  const bads=state.chords.map((u,k)=>k).filter(k=>state.chords[k].root && verdict(rolesFor(state.chords[k],k))==="bad");
+  return `<p class="hint">変えたのは ${n} 枠のうち ${changed} 枠です。原曲と、いまの案を通して聴き比べましょう。</p>
+    ${bads.length?`<ul class="issues">${bads.map(k=>`<li class="bad"><button data-go="${k}">${esc(slotName(k))}：骨格の音が ${esc(sym(state.chords[k]))} とぶつかっています。</button></li>`).join("")}</ul>`:""}
+    <div class="gbtns"><button class="btn small" id="cHearO">${play&&play.mode==="orig"?"■ 停止":"▶ 原曲を聴く"}</button><button class="btn small" id="cHearN">${play&&play.mode==="all"?"■ 停止":"▶ いまの案を聴く"}</button>
+    <span class="sp"></span><button class="btn small primary" id="cReviewRestart">最初からやり直す</button></div>`;
+}
+
+function bindCourse(el){
+  const step=getCStep(), id=cStepId(), t=curTask(), i=state.sel, c=COURSES[state.songId];
+  // an empty harmonize plan is simply given the original's cells (recorded for Undo)
+  if(state.harm && !gridIsOrig() && state.chords.every(u=>!u.root)){ state.chords=emptyOrigGrid(); save(); openTask(t); render(); return; }
+  el.querySelectorAll("[data-genre]").forEach(b=>{
+    b.onclick=()=>{ 
+      const g = b.dataset.genre;
+      if(g === state.genre && !state.pendingGenre) return;
+      const gMem = cmem[(state.harm?"rehamo:htask:":"rehamo:task:"+g+":")+state.songId] || store.get((state.harm?"rehamo:htask:":"rehamo:task:"+g+":")+state.songId);
+      const activeIds = new Set(((c&&c[g]&&c[g].tasks)||[]).filter(x=>!["read","setup","rhythm","review"].includes(x.step)).map(x=>x.id));
+      const hasProgress = Array.isArray(gMem) && gMem.some(id=>activeIds.has(id));
+      
+      if(hasProgress) {
+        state.pendingGenre = g;
+        renderInsp();
+      } else {
+        keepGenreSheet(); leaveExample();
+        const before = JSON.stringify(state.chords);
+        setGenre(g);
+        if(!state.harm){ state.chords = genreBaseChords(state.songId, g); save(); }
+        openTask(curTask());   // clears cmsg, so the message is set after it
+        // the sheet was replaced without asking; say how to get the previous one back
+        if(!state.harm && JSON.stringify(state.chords)!==before) cmsg={kind:"good", text:`「${c[g].label}」の土台を楽譜にセットしました。前の楽譜には、ツールバーの「元に戻す」で戻せます。`};
+        render();
+      }
+    };
+  });
+  const cbf=$("#cApplyBase");
+  if(cbf) cbf.onclick=()=>{
+    leaveExample();
+    state.chords = genreBaseChords(state.songId, state.genre);
+    save(); cmsg={kind:"good", text:"このコースの土台（リハモ入門の完成形）を楽譜に入れました。ここから味付けを進められます。"};
+    render();
+  };
+  const csf=$("#cShowFinal");
+  if(csf) csf.onclick=()=>{
+    const fin = typeof COURSE_FINALS!=="undefined" && COURSE_FINALS[state.songId] && COURSE_FINALS[state.songId][state.genre];
+    if(!fin) return;
+    const gLabel = COURSES[state.songId][state.genre].label;
+    const exName = `完成例（${gLabel}）`;
+    const workIdx = plans.list.findIndex(p => !p.isExample && p.name !== "見本");
+    const cmpIdx = workIdx >= 0 ? workIdx : (plans.cur >= 0 ? plans.cur : 0);
+    let exIdx = plans.list.findIndex(p => p.isExample);
+    if(exIdx >= 0){
+      plans.list[exIdx] = {name: exName, chords: JSON.parse(JSON.stringify(fin)), isExample: true};
+    } else if(plans.list.length < PLAN_MAX){
+      plans.list.push({name: exName, chords: JSON.parse(JSON.stringify(fin)), isExample: true});
+      exIdx = plans.list.length - 1;
+    } else {
+      exIdx = plans.list.length - 1;
+      plans.list[exIdx] = {name: exName, chords: JSON.parse(JSON.stringify(fin)), isExample: true};
+    }
+    plans.cur = -1;
+    switchPlan(exIdx);
+    cmpPlan = cmpIdx !== exIdx ? cmpIdx : null;
+    cmsg = {kind:"good", text:`「${exName}」をアレンジ案に表示しました。上のアレンジ案バーから「${plans.list[cmpIdx]?.name || "自分の案"}」にいつでも戻せます。`};
+    render();
+  };
+  const cg=$("#cGrid"); if(cg) cg.onclick=()=>{ newPlan(); state.chords=emptyOrigGrid(); save(); openTask(curTask()); render(); };
+  el.querySelectorAll("[data-cs]").forEach(b=>b.onclick=()=>goCStep(+b.dataset.cs));
+  const move = m => { if(!m) return; if(m.step!==step){ cmem[cstepKey()]=m.step; store.set(cstepKey(), m.step); }
+    openTask(m.task); const pe=$("#insp"); if(pe) pe.scrollTop=0; render(); };
+  const cp=$("#cPrev"), cn=$("#cNext");
+  if(cp) cp.onclick=()=>move(cMove(-1));
+  if(cn) cn.onclick=()=>move(cMove(1));
+  const cres = $("#cResume");
+  if(cres) cres.onclick=()=>{
+    const g=state.pendingGenre; keepGenreSheet(); leaveExample(); setGenre(g);
+    const kept=store.get(gsheetKey(g));
+    const back = !state.harm && validChords(kept) && JSON.stringify(kept)!==JSON.stringify(state.chords);
+    if(back){ state.chords=kept; save(); }   // recorded for Undo like any other edit
+    openTask(curTask());   // clears cmsg, so the message is set after it
+    if(back) cmsg={kind:"good", text:`「${c[g].label}」の続きの楽譜に戻しました。`};
+    render(); };
+  const crestart = $("#cRestart");
+  if(crestart) crestart.onclick=()=>{ resetCourse(state.pendingGenre); };
+  const crestartCur = $("#cRestartCur");
+  if(crestartCur) crestartCur.onclick=()=>{ if(confirm(state.genre==="basic"?"記録と楽譜を原曲に戻して最初からやり直しますか？\n（ツールバーの「元に戻す」で直前の楽譜には戻せます）":"記録をリセットしてリハモ入門の完成形からやり直しますか？\n（ツールバーの「元に戻す」で直前の楽譜には戻せます）")) resetCourse(); };
+  el.querySelectorAll("[data-ct]").forEach(b=>b.onclick=()=>{ openTask(stepTasks(id).find(x=>x.id===b.dataset.ct)); render(); });
+  el.querySelectorAll("[data-go]").forEach(b=>b.onclick=()=>selectCell(+b.dataset.go));
+  if(!t) return;
+  // steps that are done by being seen, or by their state
+  if(t.step==="setup" || t.step==="rhythm" || t.step==="review") markDone(t.id);
+  if(t.step==="setup"){
+    el.querySelectorAll("[data-hear-setup]").forEach(b=>b.onclick=()=>{
+      const s=t.spots[+b.dataset.hearSetup], bpb=song.bpb, bar=s.bar-1;
+      const b0=Math.max(0, bar-1)*bpb, b1=Math.min(song.nbars, bar+3)*bpb;
+      const U=state.chords, from=Math.max(0, U.findIndex(x=>x.s+x.l>b0+1e-6)), to=U.findIndex(x=>x.s>=b1-1e-6);
+      playRange(from, to<0?U.length:to, U, "ccmp");
+    });
+  }
+  if(t.step==="flow" && !flowIssues().length) markDone(t.id);
+  if(t.step==="read"){
+    el.querySelectorAll("[data-hear]").forEach(b=>b.onclick=()=>{ const s=t.spots[+b.dataset.hear], ou=origUnits(), e=beatOf(s.bar,s.beat);
+      const ph=phrases().find(p=>e>=p.from*song.bpb-1e-6 && e<(p.to+1)*song.bpb-1e-6), a=ph?ph.from*song.bpb:0;
+      const from=Math.max(0, ou.findIndex(x=>x.s+x.l>a+1e-6)), to=ou.findIndex(x=>x.s>e+1e-6);
+      playRange(from, to<0?ou.length:to, ou, "corig"); });
+    el.querySelectorAll("[data-end]").forEach(b=>b.onclick=()=>{ const s=t.spots[+b.dataset.end];
+      if(s.end){ markDone(t.id); cmsg=null; } else cmsg={kind:"warn", text:"もう一度、2つを聴き比べてみましょう。終わった感じがするのは、どちらでしょう。"};
+      renderInsp(); render(); });
+    return;
+  }
+  const ti=taskCell(t);
+  el.querySelectorAll("[data-oc]").forEach(b=>b.onclick=()=>{ const it=stepList(t.step==="flow"?"flow":t.step, i)[+b.dataset.oc];
+    placeEntry(t.step==="flow"?{step:"prim"}:t, it, i); previewSel(); });
+  const bt=$("#cBackTask"); if(bt) bt.onclick=()=>{ openTask(t); render(); };
+  const ho=$("#cHearO"), hn=$("#cHearN");
+  if(ho) ho.onclick=()=>{ if(play&&play.mode==="orig") stop(); else { const ou=origUnits(); playRange(0,ou.length,ou,"orig"); } };
+  if(hn) hn.onclick=()=>{ if(play&&play.mode==="all") stop(); else playRange(0,state.chords.length,state.chords,"all"); };
+  const revRest=$("#cReviewRestart"); if(revRest) revRest.onclick=()=>{ if(confirm("記録と楽譜をリセットして最初からやり直しますか？")) resetCourse(); };
+  const cst=$("#cStop"); if(cst) cst.onclick=()=>stop();
+  const ap=$("#autoPlayOn"); if(ap) ap.onchange=e=>{ state.autoPlay=e.target.checked; store.set("rehamo:autoplay", state.autoPlay); };
+  if(ti<0) return;
+  const cneed=$("#cNeed"); if(cneed) cneed.onclick=()=>{
+    if(t.needCliche4){
+      if(state.chords[0] && state.chords[0].l===4) splitUnit(0, true);
+      [0,1,2,3].forEach(k=>{ if(state.chords[k]) state.chords[k]={s:k*2, l:2, root:"C", q:"", tech:""}; });
+      save(); render(); return;
+    }
+    if(t.needNext && state.chords[ti+1] && !state.chords[ti+1].root){
+      const u=state.chords[ti+1], nxc=parseChord(t.needNext);
+      state.chords[ti+1]={s:u.s, l:u.l, root:nxc.root, q:nxc.q, tech:""};
+    }
+    if(t.need) setChord(ti, parseChord(t.need), ""); else { save(); render(); }
+  };
+  const cb=$("#cBack"); if(cb) cb.onclick=()=>{ if(state.harm) setChord(ti, origAt(ti), "");
+    else { const n=Math.max(...t.picks.map(p=>pickLen(p.c))); for(let k=ti+n-1;k>=ti;k--) if(state.chords[k]) restoreOrig(k); render(); } };
+  const cr=$("#cRedo"); if(cr) cr.onclick=()=>{
+    const d=doneSet(); d.delete(t.id); cmem[ctaskKey()]=[...d]; store.set(ctaskKey(), [...d]); cmsg=null;
+    if(state.harm && t.need) setChord(ti, parseChord(t.need), "");
+    else if(state.harm){ const u=state.chords[ti]; state.chords[ti]={s:u.s,l:u.l,root:null,q:null}; save(); render(); }
+    else { const n=Math.max(...t.picks.map(p=>pickLen(p.c))); for(let k=ti+n-1;k>=ti;k--) if(state.chords[k]) restoreOrig(k); render(); } };
+  const rp = ti===i ? resolvePicks(t, ti) : [];
+  el.querySelectorAll("[data-cp]").forEach(b=>b.onclick=()=>{ const r=rp[+b.dataset.cp]; if(!r||!r.it) return;
+    if(r.p.bad){
+      // sound the clash without placing it: the score keeps the chord it had
+      const U=applyToCopy(r.it, ti); const {b0,b1}=cmpRange();
+      const from=Math.max(0,U.findIndex(x=>x.s+x.l>b0+1e-6)), to=U.findIndex(x=>x.s>=b1-1e-6);
+      playRange(from, to<0?U.length:to, U, "ccmp");
+      cmsg={kind:"bad", text:`✕ ${entryLabel(r.it, ti)}：${sayText(r.p.why)||"骨格の音とぶつかります。"}（楽譜のコードは変えていません。いま鳴らしています）`};
+      renderInsp(); return;
+    }
+    const label=entryLabel(r.it, ti);
+    placeEntry(t, r.it, ti); markDone(t.id);
+    cmsg={kind:"good", text: state.autoPlay ? `${label} を置きました。前後の小節を鳴らします。原曲と比べるときは、上の「聴き比べ」の「▶ 原曲」を押します。` : `${label} を置きました。「▶ 前小節から」や上の「聴き比べ」で響きを確かめられます。`};
+    state.sel=ti; render(); if(state.autoPlay) playCourse(state.chords); });
+  const ce=$("#cEmpty"); if(ce) ce.onclick=()=>{ const k=fillOrder().find(j=>j!==i && !state.chords[j].root); if(k!=null) selectCell(k); };
+  const cf=$("#cFill"); if(cf) cf.onclick=()=>{
+    state.chords.forEach((u,k)=>{ if(u.root) return; const o=origAt(k); state.chords[k]={s:u.s, l:u.l, root:o.root, q:o.q, ...(o.bass?{bass:o.bass}:{}), tech:"原曲"}; });
+    save(); render(); };
+}
+// forget this song's course progress in the open mode and set the sheet back to the course's start
+// (recorded for Undo); targetGenre: restart that genre instead of resuming it
+function resetCourse(targetGenre){
+  const g = targetGenre || state.genre;
+  if(g!==state.genre) keepGenreSheet();
+  leaveExample();
+  if(!state.harm) try{ localStorage.removeItem(gsheetKey(g)); }catch(e){}
+  const tk = (state.harm?"rehamo:htask:":"rehamo:task:"+g+":")+state.songId;
+  const sk = (state.harm?"rehamo:hcstep:":"rehamo:cstep:"+g+":")+state.songId;
+  try{ localStorage.removeItem(tk); localStorage.removeItem(sk); }catch(e){}
+  delete cmem[tk]; delete cmem[sk];
+  const flow = state.harm ? ["cad","rhythm","prim","flow","widen","color"] : (COURSES[state.songId][g]?COURSES[state.songId][g].steps:[]);
+  flow.forEach(id=>delete cpick[sk+":"+id]);
+  
+  // Also reset the sheet to the starting point
+  state.chords = state.harm ? emptyOrigGrid() : genreBaseChords(state.songId, g);
+  save();
+
+  setGenre(g);
+  openTask(curTask()); render();
+}
+function entryLabel(it, i){
+  if(it.cells) return it.cells.map(x=>sym(x.c)).join(" → ");
+  if(it.split) return splitPair(it,i).map(sym).join(" → ");
+  return sym(it.c);
 }

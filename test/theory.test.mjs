@@ -96,9 +96,26 @@ test("a II–V proposal divides the cell and one undo step restores it", () => {
   assert.equal(run(`JSON.stringify(state.chords)`), before);
 });
 
-test("a cliché that leads to IV arrives on the seventh chord", () => {
+test("a cliché that leads to IV arrives on the seventh chord, but only inside a phrase", () => {
+  const toNext = i => run(`techniques(${i}).filter(x=>x.tech==="cliche" && /次のコードへ/.test(x.name)).map(x=>x.cells.map(c=>sym(c.c)).join(">"))`);
+  // 赤とんぼ: C, C, then F in the same phrase
+  load("akatombo");
+  assert.ok(toNext(0).length > 0);
+  for (const p of toNext(0)) assert.equal(p.split(">").at(-1), "C7");
+  // ジングルベル: the held C (bars 1–4) ends a phrase before F, so no line leads into it
   load("jingle");
-  assert.deepEqual(proposals(0, "cliche")[0].split(">").slice(-2), ["Cmaj7", "C7"]);
+  assert.deepEqual(toNext(0), []);
+});
+
+test("IV7 is a subdominant unless it moves on as a substitute or secondary dominant", () => {
+  const an = (c, next, minor) => run(`(()=>{ const a=analyze(parseChord(${JSON.stringify(c)}), {tonic:"C", pc:0, minor:${minor}}, ${next ? `parseChord(${JSON.stringify(next)})` : "undefined"}); return {fn:a.fn, kind:a.kind}; })()`);
+  load("twinkle");
+  assert.deepEqual(an("F7", "C", false), { fn: "S", kind: "bor" });
+  assert.deepEqual(an("F7", undefined, false), { fn: "S", kind: "bor" });
+  assert.deepEqual(an("F7", "Em7", false), { fn: null, kind: "sub" });   // down a semitone to III
+  assert.deepEqual(an("F7", "G7", true), { fn: "S", kind: "bor" });      // minor: Dorian IV7
+  assert.deepEqual(an("F7", "B♭", true), { fn: null, kind: "sec" });     // minor: V7 of ♭VII
+  assert.deepEqual(an("D♭7", "C", false), { fn: null, kind: "sub" });    // other substitutes are unchanged
 });
 
 test("solf reads syllables from the tonic, or from ラ in minor when chosen", () => {

@@ -5,7 +5,7 @@
 const SONG_LEVELS = [
   ["入門（I・IV・V）", ["twinkle","joy","jingle","saints"]],
   ["初級（3拍子・アウフタクト）", ["happy","akatombo","amazing","silent"]],
-  ["中級（ブルース・短調・ジャズ）", ["blues","godrest","tea"]],
+  ["中級（ブルース・短調・ジャズ）", ["greensleeves","blues","godrest","tea"]],
 ];
 const songLabel = s => `${esc(s.name)}（${s.bpb}/4）`;
 function songOptions(){
@@ -127,9 +127,14 @@ function slotFromEvent(e){
   return hit ? hit[2] : -1;
 }
 $("#sheet").onclick=e=>{ const i=slotFromEvent(e); if(i<0) return; selectCell(i); };
-$("#sheet").ondblclick=e=>{ if(slotFromEvent(e)>=0) previewSel(); };
+$("#sheet").ondblclick=e=>{ if(slotFromEvent(e)>=0){ const i=state.sel; playRange(i, Math.min(i+2,state.chords.length), state.chords, "slot"); } };
 let lastBps=0;
-if(window.ResizeObserver) new ResizeObserver(()=>{ const b=barsPerSystem(); if(lastBps && b!==lastBps) render(); lastBps=b; }).observe($("#sheet"));
+// Re-render on the next frame, not inside the callback: render() changes #sheet's size, and doing that while
+// the observer delivers makes the browser raise "ResizeObserver loop completed with undelivered notifications"
+// (an error event that hosts such as Claude's preview pane report as uncaught).
+let roFrame=0;
+if(window.ResizeObserver) new ResizeObserver(()=>{ if(roFrame) return;
+  roFrame=requestAnimationFrame(()=>{ roFrame=0; const b=barsPerSystem(); if(lastBps && b!==lastBps) render(); lastBps=b; }); }).observe($("#sheet"));
 $("#playAll").onclick=()=>{ if(play&&play.mode==="all") stop(); else playRange(0,state.chords.length,state.chords,"all"); };
 document.querySelectorAll(".modesw button").forEach(b=>b.onclick=()=>{ const h=b.dataset.mode==="harm"; if(h===state.harm) return; stop(); state.harm=h; state.reveal=false; $("#resetConfirm").hidden=true; store.set("rehamo:harm",state.harm); restoreTab(); applyHarmUi(); loadSong(state.songId); });
 function applyHarmUi(){
@@ -144,14 +149,18 @@ function applyHarmUi(){
 // unavailable, store.get gives null and the box simply shows on every visit.
 const INTRO_REHARM = ["曲を選んで「全体を再生」で聴きます。", "楽譜の上のコード名（枠）を押して選びます。",
   "右の「ガイド」の提案を選ぶと、コードが置き換わって音が鳴ります。音符の色と下の数字で、メロディとの相性がわかります。",
-  "気に入らなければ「元に戻す」（Ctrl+Z）。ステップを進めると、手法が少しずつ増えます。"];
+  `気に入らなければ「元に戻す」（${/Mac|iPhone|iPad/.test(navigator.platform||navigator.userAgent)?"⌘Z":"Ctrl+Z"}）。ステップを進めると、手法が少しずつ増えます。`];
 const INTRO_HARM = ["曲を選んで「全体を再生」で旋律を聴きます。", "右の「ガイド」のステップ1から、順にコードを決めていきます。",
   "コードを置くと音符に色が付き、合っているかどうかがわかります。", "全部置けたら「原曲のコードを見る」で見比べます。"];
-function showIntro(on){
-  $("#intro").hidden=!on; $("#helpBtn").setAttribute("aria-expanded", String(on)); store.set("rehamo:intro", !on);
-}
+// 使い方 reopens the box after it has been closed (without it, a closed box could never be shown again)
+function showIntro(on){ $("#intro").hidden=!on; $("#helpBtn").setAttribute("aria-expanded", String(on)); store.set("rehamo:intro", !on); }
 $("#helpBtn").onclick=()=>showIntro($("#intro").hidden);
 $("#introClose").onclick=()=>{ showIntro(false); $("#helpBtn").focus(); };
+// Undo / redo shortcuts, shown on hover. The title sits on a wrapper because a disabled button shows no tooltip.
+// Macs use the Command key (the handler below accepts Ctrl or Command on any system).
+const MOD = /Mac|iPhone|iPad/.test(navigator.platform||navigator.userAgent) ? "⌘" : "Ctrl+";
+$("#undoTip").title=`元に戻す：直前の操作を取り消します（${MOD}Z）`;
+$("#redoTip").title=`やり直す：元に戻した操作を、もう一度行います（${MOD}Shift+Z）`;
 $("#summary").addEventListener("change",e=>{
   if(e.target.id==="revealOn"){ state.reveal=e.target.checked; applyHarmUi(); render(); }
   if(e.target.id==="laOn"){ state.laMinor=e.target.checked; store.set("rehamo:la", state.laMinor); render(); }
@@ -229,6 +238,9 @@ function replayLater(){
 $("#bpm").oninput=e=>{ state.bpm=+e.target.value; $("#bpmOut").textContent=state.bpm; replayLater(); };
 $("#mix").value=state.mix;
 $("#mix").oninput=e=>{ state.mix=+e.target.value; store.set("rehamo:mix", state.mix); replayLater(); };
+if(state.style!=="auto" && !STYLES.has(state.style)) state.style="auto";   // the menu has no option for it
+$("#styleSel").value=state.style;
+$("#styleSel").onchange=e=>{ state.style=e.target.value; store.set("rehamo:style", state.style); replayLater(); };
 $("#loopOn").checked=state.loop;
 $("#loopOn").onchange=e=>{ state.loop=e.target.checked; store.set("rehamo:loop", state.loop); };
 $("#melOn").onchange=e=>{ state.melOn=e.target.checked; };
@@ -253,6 +265,11 @@ $("#plansBar").addEventListener("click", e=>{
   const b=e.target.closest("button"); if(!b) return;
   if(b.dataset.plan!=null) return switchPlan(+b.dataset.plan);
   if(b.id==="planNew") return newPlan();
+  if(b.id==="planRen"){
+    const nm = prompt("アレンジ案の名前を入力してください", plans.list[plans.cur].name);
+    if(nm && nm.trim()){ plans.list[plans.cur].name = nm.trim(); storePlans(); renderPlans(); }
+    return;
+  }
   if(b.id==="planDel"){ b.hidden=true; $("#planDelConfirm").hidden=false; return; }
   if(b.id==="planDelNo"){ $("#planDelConfirm").hidden=true; $("#planDel").hidden=false; return; }
   if(b.id==="planDelYes") return deletePlan(plans.cur);
@@ -261,6 +278,8 @@ $("#plansBar").addEventListener("click", e=>{
 $("#plansBar").addEventListener("change", e=>{
   if(e.target.id==="planCmp"){ cmpPlan = e.target.value==="" ? null : +e.target.value; render(); }
 });
+
+
 $("#copyProg").onclick=async()=>{
   const t=progText(), ok=await copyText(t), b=$("#copyProg"), box=$("#progBox");
   if(ok){ box.hidden=true; b.textContent="コピーしました"; }
@@ -269,9 +288,9 @@ $("#copyProg").onclick=async()=>{
 };
 $("#reset").onclick=()=>{ const pn = plans.list.length>1 ? plans.list[plans.cur].name+"の" : "";
   $("#resetMsg").textContent = state.harm?`${pn}置いたコードをすべて消しますか？`:`${pn}置き換えをすべて元に戻しますか？`;
-  $("#resetConfirm").hidden=false; $("#resetYes").focus(); };
-$("#resetNo").onclick=()=>{ $("#resetConfirm").hidden=true; };
-$("#resetYes").onclick=()=>{ $("#resetConfirm").hidden=true; stop();
+  $("#reset").hidden=true; $("#resetConfirm").hidden=false; $("#resetYes").focus(); };
+$("#resetNo").onclick=()=>{ $("#resetConfirm").hidden=true; $("#reset").hidden=false; };
+$("#resetYes").onclick=()=>{ $("#resetConfirm").hidden=true; $("#reset").hidden=false; stop();
   rev={target:null,chain:[]}; state.chords=state.harm?emptyUnits():origUnits(); state.sel=Math.min(state.sel,state.chords.length-1); save(); render(); };
 $("#undoBtn").onclick=()=>histGo(-1);
 $("#redoBtn").onclick=()=>histGo(1);

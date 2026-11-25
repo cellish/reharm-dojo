@@ -33,16 +33,25 @@
         <button class="btn" id="newSong">＋ 曲を入力</button>
         <button class="btn" id="editSong" hidden>この曲を編集</button>
         <span class="sp"></span>
-        <button class="btn" id="undoBtn" title="元に戻す（Ctrl+Z）" disabled>↶ 元に戻す</button>
-        <button class="btn" id="redoBtn" title="やり直す（Ctrl+Shift+Z）" disabled>↷ やり直す</button>
+        <span class="tipwrap" id="undoTip"><button class="btn" id="undoBtn" disabled>↶ 元に戻す</button></span>
+        <span class="tipwrap" id="redoTip"><button class="btn" id="redoBtn" disabled>↷ やり直す</button></span>
         <button class="btn warn" id="reset">すべて原曲に戻す</button>
-        <span class="confirm" id="resetConfirm" hidden><span id="resetMsg">置き換えをすべて元に戻しますか？</span>
-          <button class="btn warn" id="resetYes">戻す</button><button class="btn" id="resetNo">やめる</button></span>
+        <span class="confirm" id="resetConfirm" hidden><span id="resetMsg">置き換えをすべて元に戻しますか？<br><small style="font-weight:400">（ガイドのお題記録はそのまま残ります）</small></span><button class="btn warn" id="resetYes">戻す</button><button class="btn" id="resetNo">やめる</button></span>
       </div>
       <div class="trow">
         <span class="tlabel">再生</span>
         <button class="btn primary" id="playAll">▶ 全体を再生</button>
         <button class="btn" id="playOrig">原曲で再生</button>
+        <select id="styleSel" class="btn" aria-label="伴奏スタイル" title="再生時の伴奏リズムを切り替えます">
+          <option value="auto">伴奏：自動（コース連動）</option>
+          <option value="plain">伴奏：白玉（シンプル）</option>
+          <option value="jpop">伴奏：J-POP</option>
+          <option value="jazz">伴奏：ジャズ（スウィング）</option>
+          <option value="bossa">伴奏：ボサノバ</option>
+          <option value="neosoul">伴奏：ネオソウル</option>
+          <option value="country">伴奏：カントリー</option>
+          <option value="rock">伴奏：ロック</option>
+        </select>
         <label class="tempo" for="bpm">テンポ <input type="range" id="bpm" min="50" max="150" value="88"><output id="bpmOut">88</output></label>
         <label class="chk"><input type="checkbox" id="melOn" checked>メロディも鳴らす</label>
         <label class="chk"><input type="checkbox" id="loopOn">くり返す</label>

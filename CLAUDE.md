@@ -9,13 +9,13 @@
 
 ## 役割の分担
 
-このプロジェクトは、計画・実装・確認を別のモデルが担当する。
+このプロジェクトは、計画・実装・確認を別のモデルが担当する（2026-11-25 から当面、Fable は使わない）。
 
 | 役割 | すること |
 |---|---|
-| 計画（Fable） | `docs/PLAN.md` に、項目ごとの仕様と受け入れ条件を書く。 |
-| 実装（Opus） | `docs/PLAN.md` の項目を上から順に実装する。1項目＝1コミット。 |
-| 確認（Fable） | コミットごとの差分を、受け入れ条件と理論の正しさに照らして見る。 |
+| 計画（主に Opus） | `docs/PLAN.md` に、項目ごとの仕様と受け入れ条件を書く。 |
+| 実装（Opus か Sonnet） | `docs/PLAN.md` の項目を上から順に実装する。1項目＝1コミット。 |
+| 確認（計画担当） | コミットごとの差分を、受け入れ条件と理論の正しさに照らして見る。 |
 
 実装担当の決まり：
 
@@ -49,13 +49,13 @@ python3 tools/smoke.py      # 全曲・両モード・全ステップを開き�
 
 | ファイル | 中身 |
 |---|---|
-| `js/songs.js` | 収録曲 `SONGS`。旋律は小節ごとの文字列、コードは小節線で区切った文字列。 |
+| `js/songs.js` | 収録曲 `SONGS`。旋律は小節ごとの文字列、コードは小節線で区切った文字列。コースのデータ：お題 `COURSES`（曲 → 入門 `basic`・ジャンル・伴奏付け `harm`）、ジャンルの土台 `BASIC_FOUNDATION`、完成例 `COURSE_FINALS`。 |
 | `js/music.js` | 音名、コードの種類 `Q`、コード名の読み取り `parseChord`、移調（`xp`、`setKey`、`sym`、`droot`、`dnote`）。 |
 | `js/theory.js` | 旋律とコードの判定（`roleOf`、`rolesFor`、`verdict`、`isStrong`）、調と機能（`keyAt`、`analyze`）、提案（`techniques`、`harmSuggest`）。 |
 | `js/state.js` | `state`、保存、Undo（`save`、`histGo`）、枠の編集（`setChord`、`splitUnit`、`mergeNext`）。 |
 | `js/score.js` | 楽譜。VexFlow での描画 `vfSystem` と、全体の描き直し `render`。 |
-| `js/guide.js` | 右のパネル。選択中の枠のバー、候補、「着地点から」（旧称：逆算）、2つのガイド（`guideHtml`＝伴奏付け、`rGuideHtml`＝リハモ）。 |
-| `js/audio.js` | Web Audio での再生（`playRange`、`tone`）。 |
+| `js/guide.js` | 右のパネル。選択中の枠のバー、候補、「着地点から」（旧称：逆算）、2つのガイド（`guideHtml`＝伴奏付け、`rGuideHtml`＝リハモ）、コース（`courseHtml`、ジャンルの切り替えと土台 `genreBaseChords`）。 |
+| `js/audio.js` | Web Audio での再生（`playRange`、`tone`）。伴奏スタイル（`scheduleCell`、`STYLES`）。音は先読みの分だけ作る（`LOOKAHEAD_S`）。 |
 | `js/app.js` | 曲のメニュー、曲の入力、キー操作、凡例の用語説明、起動。 |
 | `vendor/` | VexFlow 5.0.0（同梱。編集しない）。 |
 | `tools/single-file.py` | 1つの HTML にまとめる（Claude のアーティファクト公開用）。 |
