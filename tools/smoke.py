@@ -111,53 +111,57 @@ with sync_playwright() as p:
         ev(js)
     if ev('document.querySelectorAll("#insp .tile").length') < 10:
         errs.append("candidate grid: too few tiles after clearing the filters")
-    # beginner course (docs/PLAN.md section 5): every step and task of the four songs, both modes.
+    # courses (docs/PLAN.md sections 5 and 6): every step and task of every song, the harmonize course and each genre.
     # The recommended pick is placed (and undone), the clashing example is sounded without changing the cells.
-    ev('store.set("rehamo:course", true)')
     for harm in (False, True):
         for sid in ev("Object.keys(COURSES)"):
-            ev(f"state.harm={'true' if harm else 'false'}; applyHarmUi(); state.tab='guide'; loadSong('{sid}'); render()")
-            if harm and not ev("gridIsOrig()"):
-                errs.append(f"course {sid}: the harmonize plan did not get the original's cells")
-            for st in range(1, ev("CFLOW[cMode()].length") + 1):
-                ev(f"goCStep({st})")
-                for tid in ev("stepTasks(cStepId()).map(t=>t.id)"):
-                    ev(f"openTask(stepTasks(cStepId()).find(t=>t.id==='{tid}')); render()")
-                    n += 1
-                    if ev("!!$('#cNeed')"):
-                        ev("$('#cNeed').click()")
-                    if not ev("!!curTask().picks"):
-                        continue
-                    picks = ev("[...document.querySelectorAll('#insp [data-cp]')].length")
-                    want = ev("curTask().picks.length")
-                    if picks != want:
-                        errs.append(f"course {sid} {'harm' if harm else 'reharm'} {tid}: {picks} of {want} picks shown")
-                        continue
-                    bad = ev("curTask().picks.findIndex(p=>p.bad)")
-                    if bad >= 0:
+            genres = [None] if harm else ev(f"Object.keys(COURSES['{sid}']).filter(k=>k!=='harm')")
+            for g in genres:
+                tab = "course"
+                ev(f"state.harm={'true' if harm else 'false'}; applyHarmUi(); state.tab='{tab}'; loadSong('{sid}'); render()")
+                if g:
+                    ev(f"setGenre('{g}'); state.chords=genreBaseChords('{sid}','{g}'); save(); render()")
+                if harm and not ev("gridIsOrig()"):
+                    errs.append(f"course {sid}: the harmonize plan did not get the original's cells")
+                name = f"{sid} {g or 'harm'}"
+                for st in range(1, ev("CFLOW().length") + 1):
+                    ev(f"goCStep({st})")
+                    for tid in ev("stepTasks(cStepId()).map(t=>t.id)"):
+                        ev(f"openTask(stepTasks(cStepId()).find(t=>t.id==='{tid}')); render()")
+                        n += 1
+                        if ev("!!$('#cNeed')"):
+                            ev("$('#cNeed').click()")
+                        if not ev("!!curTask().picks"):
+                            continue
+                        picks = ev("[...document.querySelectorAll('#insp [data-cp]')].length")
+                        want = ev("curTask().picks.length")
+                        if picks != want:
+                            errs.append(f"course {name} {tid}: {picks} of {want} picks shown")
+                            continue
+                        bad = ev("curTask().picks.findIndex(p=>p.bad)")
+                        if bad >= 0:
+                            before = ev("JSON.stringify(state.chords)")
+                            ev(f"document.querySelectorAll('#insp [data-cp]')[{bad}].click()")
+                            if ev("JSON.stringify(state.chords)") != before:
+                                errs.append(f"course {name} {tid}: the clashing example changed the cells")
+                        best = ev("curTask().picks.findIndex(p=>p.best)")
                         before = ev("JSON.stringify(state.chords)")
-                        ev(f"document.querySelectorAll('#insp [data-cp]')[{bad}].click()")
+                        ev(f"document.querySelectorAll('#insp [data-cp]')[{best}].click()")
+                        if not ev(f"doneSet().has('{tid}')"):
+                            errs.append(f"course {name} {tid}: placing the recommended pick did not finish the task")
+                        if harm and ev("curTask().step")=="prim":
+                            continue   # keep the harmonize chords: later steps build on them
+                        ev("histGo(-1)")
                         if ev("JSON.stringify(state.chords)") != before:
-                            errs.append(f"course {sid} {tid}: the clashing example changed the cells")
-                    best = ev("curTask().picks.findIndex(p=>p.best)")
-                    before = ev("JSON.stringify(state.chords)")
-                    ev(f"document.querySelectorAll('#insp [data-cp]')[{best}].click()")
-                    if not ev(f"doneSet().has('{tid}')"):
-                        errs.append(f"course {sid} {tid}: placing the recommended pick did not finish the task")
-                    if harm and ev("curTask().step")=="prim":
-                        continue   # keep the harmonize chords: later steps build on them
-                    ev("histGo(-1)")
-                    if ev("JSON.stringify(state.chords)") != before:
-                        errs.append(f"course {sid} {tid}: undo did not bring the cells back")
-                if harm and ev("cStepId()") == "prim" and ev("!!$('#cFill')"):
-                    ev("$('#cFill').click()")
-            ev("stop()")
-            ev(f"localStorage.removeItem(ctaskKey()); localStorage.removeItem(cstepKey()); for(const k in cmem) delete cmem[k]")
-            ev('$("#resetYes").click()')
-    ev('state.harm=false; applyHarmUi(); loadSong("happy"); state.tab="guide"; render()')
-    if not ev("!!document.querySelector('#insp [data-course=\"1\"][disabled]')"):
-        errs.append("course: 入門 should be disabled for a song without tasks")
-    ev('store.set("rehamo:course", false); render()')
+                            errs.append(f"course {name} {tid}: undo did not bring the cells back")
+                    if harm and ev("cStepId()") == "prim" and ev("!!$('#cFill')"):
+                        ev("$('#cFill').click()")
+                ev("stop()")
+                ev("localStorage.removeItem(ctaskKey()); localStorage.removeItem(cstepKey()); for(const k in cmem) delete cmem[k]")
+                ev('$("#resetYes").click()')
+    ev('state.harm=false; applyHarmUi(); loadSong("happy"); state.tab="course"; render()')
+    if ev("courseData()") is not None:
+        errs.append("course: a song without tasks should have no course")
     # how long a selection change takes on the longest song (see docs/PLAN.md, items A and I)
     ev('state.harm=false; applyHarmUi(); loadSong("tea")')
     ms = ev("(()=>{ const t=performance.now(); for(let k=0;k<10;k++){ state.sel=k; render(); } return (performance.now()-t)/10; })()")

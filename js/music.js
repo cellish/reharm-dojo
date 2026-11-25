@@ -4,7 +4,12 @@ const SHARP = ["C","C#","D","D#","E","F","F#","G","G#","A","A#","B"];
 const FLAT  = ["C","D♭","D","E♭","E","F","G♭","G","A♭","A","B♭","B"];
 const MANUAL_ROOTS = ["C","D♭","D","E♭","E","F","F#","G","A♭","A","B♭","B"];
 const mod = (n,m=12)=>((n%m)+m)%m;
-function rootPc(name){ let p=LETTER[name[0]]; for(const c of name.slice(1)){ if(c==="♭"||c==="b")p--; if(c==="#"||c==="♯")p++; } return mod(p); }
+const _rpcCache=Object.create(null);
+function rootPc(name){
+  let v=_rpcCache[name]; if(v!==undefined) return v;
+  let p=LETTER[name[0]]; for(const c of name.slice(1)){ if(c==="♭"||c==="b")p--; if(c==="#"||c==="♯")p++; }
+  return (_rpcCache[name]=mod(p));
+}
 
 // quality: ct = chord tones, tn = available tensions, av = avoid
 const Q = {
@@ -66,7 +71,11 @@ const dnoteName = midi => { const d=dnote(midi); return LETTERS[d.li]+accStr(d.a
 function droot(name){ const s=parseSpelled(name), d=xposeSpelled(s.li,4,s.alter); return LETTERS[d.li]+accStr(d.alter); }
 const sym = c => c && c.root ? droot(c.root) + Q[c.q].show + (c.bass && rootPc(c.bass)!==rootPc(c.root) ? "/"+droot(c.bass) : "") : "？";
 const bassPc = c => rootPc(c.bass || c.root);
-const same = (a,b) => !!(a && b && a.root && b.root && rootPc(a.root)===rootPc(b.root) && a.q===b.q && bassPc(a)===bassPc(b));
+const same = (a,b) => {
+  if(!a || !b || !a.root || !b.root || a.q!==b.q) return false;
+  if(a.root===b.root && (a.bass||"")===(b.bass||"")) return true;
+  return rootPc(a.root)===rootPc(b.root) && bassPc(a)===bassPc(b);
+};
 
 const QALIAS = {"":"","M":"","maj":"","maj7":"maj7","M7":"maj7","△7":"maj7","△":"maj7","Δ7":"maj7","Δ":"maj7","6":"6","7":"7","7sus4":"7sus4",
   "7b9":"7b9","m":"m","-":"m","m7":"m7","-7":"m7","m6":"m6","-6":"m6","m7b5":"m7b5","ø":"m7b5","ø7":"m7b5","dim7":"dim7","o7":"dim7","°7":"dim7","dim":"dim7",
@@ -74,14 +83,18 @@ const QALIAS = {"":"","M":"","maj":"","maj7":"maj7","M7":"maj7","△7":"maj7","�
   "add9":"add9","maj9":"maj9","M9":"maj9","△9":"maj9","sus4":"sus4","sus":"sus4","aug":"aug","+":"aug","m9":"m9","-9":"m9",
   "9":"9","13":"13","7#9":"7#9","7b13":"7b13","7#5":"7#5","7+5":"7#5","aug7":"7#5","+7":"7#5"};
 function normQ(q){ return QALIAS[q.replace(/[()]/g,"").replace(/♭/g,"b").replace(/♯/g,"#")]; }
+const _pcCache=Object.create(null);
 function parseChord(s){
+  if(s in _pcCache){ const hit=_pcCache[s]; return hit ? {...hit} : null; }
+  const raw=s;
   let bass=null; const sl=s.match(/^(.*)\/([A-Ga-g][#b♭♯]?)$/);
   if(sl){ s=sl[1]; bass=sl[2][0].toUpperCase()+sl[2].slice(1).replace("b","♭").replace("♯","#"); }
-  const m = s.match(/^([A-G][#b♭♯]?)(.*)$/); if(!m) return null;
-  const q = Q[m[2]] ? m[2] : normQ(m[2]); if(q===undefined) return null;
+  const m = s.match(/^([A-G][#b♭♯]?)(.*)$/); if(!m) return (_pcCache[raw]=null);
+  const q = Q[m[2]] ? m[2] : normQ(m[2]); if(q===undefined) return (_pcCache[raw]=null);
   const c={root:m[1].replace("b","♭").replace("♯","#"), q};
   if(bass && rootPc(bass)!==rootPc(c.root)) c.bass=bass;
-  return c;
+  _pcCache[raw]=c;
+  return {...c};
 }
 const durOf = d => !d ? 1 : d.includes("/") ? d.split("/")[0]/d.split("/")[1] : +d;   // "1/3" = triplet eighth
 // token: "E4" (quarter), "E4:1.5", "r" / "r:2" (rest), trailing "~" = tie to next note

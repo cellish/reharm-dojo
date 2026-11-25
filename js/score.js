@@ -46,7 +46,7 @@ function vfKey(midi){ const s=dnote(midi); return LETTERS[s.li].toLowerCase()+(s
 // everything that changes the engraving; the selection, the 「着地点から」 marks and the play position are not in
 // it, because svg() reads them from state each time it builds the markup.
 let VF_CACHE = true;   // false: engrave every time (tools/smoke.py compares both)
-const vfCache = new Map(), VF_CACHE_MAX = 64;
+const vfCache = new Map(), VF_CACHE_MAX = 32;
 function vfSystem(b0,bars,first,last,bps,units){
   const cs=getComputedStyle(document.documentElement), cv=v=>cs.getPropertyValue(v).trim();
   const col={ct:cv("--ct"),tn:cv("--tn"),av:cv("--av"),nc:cv("--nc"),pk:cv("--ink-2"),un:cv("--ink")};
@@ -97,7 +97,7 @@ function vfEngrave(b0,bars,first,last,bps,units,col){
   if(pkW) segs.push({t0:-song.pk, t1:0, x:0, w:clefW, mods:true, bx:0});
   for(let k=0;k<bars;k++){ const own=k===0&&!pkW;
     segs.push({t0:sys0+k*bpb, t1:sys0+(k+1)*bpb, x: own?0:clefW+k*barW, w: own?clefW+barW:barW, mods:own, bx:clefW+k*barW}); }
-  const vn={}, info=[];   // vn[note idx] = {first,last}; info = per segment time→x points
+  const vn={}, info=[], ctxTies=[];   // vn[note idx] = {first,last}; info = per segment time→x points
   segs.forEach((sg,si)=>{
     const st=new V.Stave(sg.x, T-40, sg.w);
     if(sg.mods){ st.addClef("treble").addKeySignature(key); if(first) st.addTimeSignature(`${bpb}/4`); }
@@ -159,7 +159,6 @@ function vfEngrave(b0,bars,first,last,bps,units,col){
     heads:heads.map(h=>({start:h.e.start, rest:!!h.e.rest, x:h.x, left:h.left, kind:h.kind, label:h.label, strong:h.strong}))}));
   return {clefW, W, barW, sys0, info:plain, inner};
 }
-const ctxTies=[];
 // time → x on one engraved system (x: between note positions; edge: where a cell starting at t begins)
 function vfMap(info, sys0){
   const seg = t => info.find(s=>t>=s.t0-1e-6 && t<s.t1-1e-6) || info[info.length-1];
@@ -199,14 +198,17 @@ function cmpMark(i){
 function renderPlans(){
   const L=plans.list, n=L.length, cur=plans.cur;
   const diffs = cmpPlan!=null ? state.chords.filter(u=>planDiff(cmpPlan,u).differs).length : 0;
-  $("#plansBar").innerHTML = `<span class="tlabel">案</span>
-    ${L.map((p,k)=>`<button class="btn small plan${k===cur?" on":""}" data-plan="${k}" aria-pressed="${k===cur}">${esc(p.name)}</button>`).join("")}
+  const isMihon = L[cur].name === "見本" || !!L[cur].isExample;
+  const canDelete = !isMihon && L.filter(p=>p.name!=="見本").length > 1;
+  $("#plansBar").innerHTML = `<span class="tlabel" title="いま楽譜に表示・編集中のアレンジ案です">アレンジ案</span>
+    ${L.map((p,k)=>`<button class="btn small plan${k===cur?" on":""}" data-plan="${k}" aria-pressed="${k===cur}" title="${k===cur?"編集中："+esc(p.name):esc(p.name)}">${esc(p.name)}</button>`).join("")}
+    ${!isMihon ? `<button class="btn small" id="planRen" title="この案の名前を変えます">✎</button>` : ""}
     ${n<PLAN_MAX?`<button class="btn small" id="planNew" title="いまの案を写して、新しい案を作ります">＋ 新しい案</button>`:""}
-    ${n>1?`<label class="chk">比べる相手 <select id="planCmp" class="btn small"><option value="">なし</option>${L.map((p,k)=>k===cur?"":`<option value="${k}"${k===cmpPlan?" selected":""}>${esc(p.name)}</option>`).join("")}</select></label>`:""}
-    ${cmpPlan!=null?`<span>違う枠 <b>${diffs}</b></span><button class="btn small" id="planPlayCmp">${play&&play.mode==="plan"?"■ 停止":`▶ ${esc(L[cmpPlan].name)}を再生`}</button>`:""}
+    ${n>1?`<label class="chk" style="margin-left:8px">比べる相手 <select id="planCmp" class="btn small"><option value="">なし</option>${L.map((p,k)=>k===cur?"":`<option value="${k}"${k===cmpPlan?" selected":""}>${esc(p.name)}</option>`).join("")}</select></label>`:""}
+    ${cmpPlan!=null?`<span style="margin-left:4px">違う枠 <b>${diffs}</b></span><button class="btn small" id="planPlayCmp">${play&&play.mode==="plan"?"■ 停止":`▶ ${esc(L[cmpPlan].name)}を再生`}</button>`:""}
     <span class="sp"></span>
-    ${n>1?`<button class="btn small warn" id="planDel">${esc(L[cur].name)}を削除</button>
-      <span class="confirm" id="planDelConfirm" hidden>${esc(L[cur].name)}を削除しますか？（元に戻せません）
+    ${canDelete?`<button class="btn small warn" id="planDel">${esc(L[cur].name)}を削除</button>
+      <span class="confirm" id="planDelConfirm" hidden>${esc(L[cur].name)}を削除しますか？
         <button class="btn small warn" id="planDelYes">削除</button><button class="btn small" id="planDelNo">やめる</button></span>`:""}`;
 }
 function render(){
@@ -214,8 +216,8 @@ function render(){
   const n=state.chords.length, bpb=song.bpb, nb=song.nbars, bps=barsPerSystem();
   $("#sheet").classList.toggle("narrow", isNarrow());
   const chainSet=new Set(rev.chain.map(e=>e.i));
-  const cOn = state.tab==="guide" && courseOn(), cMarks = cOn ? courseMarks() : new Set();
-  const showBass = state.chords.some(u=>u.bass) || (!state.harm && state.tab==="guide" && (cOn ? cStepId() : rflow())==="bass");
+  const cOn = state.tab==="course" && courseAvail() && !!courseData(), cMarks = cOn ? courseMarks() : new Set();
+  const showBass = state.chords.some(u=>u.bass) || (!state.harm && ((cOn && cStepId()==="bass") || (state.tab==="guide" && rflow()==="bass")));
   BASS_Y = DEG_Y+17; HB = showBass ? DEG_Y+24 : H;
   const gs = (!state.harm && state.tab==="guide" && !cOn) ? rflow() : null;
   const canSet = new Set(TECH[gs] ? state.chords.map((u,k)=>k).filter(k=>rStepUsable(gs,k)) : []);

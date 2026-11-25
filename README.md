@@ -64,13 +64,12 @@ Copyright (c) 2026 jun. All rights reserved.
 - `js/theory.js`：旋律とコードの関係の判定、調とコードの機能、コードの提案
 - `js/state.js`：状態の保存、元に戻す・やり直す、枠の編集
 - `js/score.js`：楽譜の描画
-- `js/guide.js`：右側のパネル（ガイド・候補・着地点から）
-- `js/course.js`：入門コース（入門の4曲で、枠と候補を絞ったお題を出すガイド）
+- `js/guide.js`：右側のパネル（入門コース・ガイド・候補・着地点から）
 - `js/audio.js`：再生
 - `js/app.js`：曲のメニュー、曲の入力、キー操作
 - `vendor/`：VexFlow と、VexFlow・Bravura・Academico のライセンス文
 - `LICENSE`、`THIRD_PARTY_NOTICES.md`：このアプリの著作権表示と、他者の著作物の一覧
-- `test/`：理論部分のテスト（`node --test`）
+- `test/`：理論部分とコースのお題のテスト（`node --test`）
 - `tools/single-file.py`：1つの HTML にまとめる道具（VexFlow は CDN から読み込む形になります）
 - `tools/smoke.py`：ブラウザで全曲・全ステップを開いて試す確認（Playwright が必要）
 - `CLAUDE.md`：Claude で作業するときの手引き
