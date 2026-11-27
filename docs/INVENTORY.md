@@ -219,6 +219,9 @@ tea:{ name:"Tea for Two", bpb:4, slot:2, src:"A♭", home:"A♭", keys:[[9,15,"C
   - 理由：コードネームを扱うアプリ（アドリブ道場など）と、判定の基準をそろえられる。
 - **メロディ音の役割の判定**（`roleOf`、`isStrong`、`isPassing`、`verdict`）
   - 理由：「骨格の音」「経過音」の考えは、旋律と和声を比べるアプリで共通に使える。
+- **伴奏スタイルと先読みの予約**（`js/audio.js` の `STYLES` 7種〈plain・jpop・jazz・bossa・neosoul・country・rock〉、`scheduleCell`、`playRange` の `jobs`）
+  - 理由：コード枠に合わせてベースとコンピングの型を鳴らす部分は、伴奏を持つ他のアプリ（アドリブ道場・フレージング道場・リズム道場・ボイシング道場）と同じ課題。先読みの分だけ予約する作りは、隠れたタブでも続く。
+  - 型は `[拍, 長さ]` の表で書かれているが、`song`・`xp`・`state` のグローバルを読むので、切り出すには引数で渡す形に直す必要がある。
 - **localStorage の薄い包み**（`store`）と、文字列のスナップショットで持つ Undo（`save`、`histGo`）
   - 理由：小さくて独立している。
 
